@@ -21,9 +21,10 @@ export default function RankingsTab() {
         <RankingList items={data.weekly} testId="weekly-ranking-list" />
       </section>
       <section>
-        <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+        <h3 className="font-bold text-slate-800 mb-1 flex items-center gap-2">
           <Globe className="w-5 h-5 text-sky-500" /> Ranking global (histórico)
         </h3>
+        <p className="text-xs text-slate-400 mb-3">Horas totales de todo el tiempo, incluyendo las horas históricas cargadas. Sin premios.</p>
         <RankingList items={data.global} testId="global-ranking-list" />
       </section>
     </div>

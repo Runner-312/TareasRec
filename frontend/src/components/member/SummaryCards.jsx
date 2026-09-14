@@ -1,4 +1,4 @@
-import { Clock, Wallet } from "lucide-react";
+import { Clock, Wallet, History } from "lucide-react";
 import { fmtMoney, fmtMinutes } from "@/lib/api";
 
 const balanceHint = (w) => {
@@ -7,7 +7,7 @@ const balanceHint = (w) => {
   return `${w.hours} h × $0.30`;
 };
 
-export default function SummaryCards({ week: w }) {
+export default function SummaryCards({ week: w, globalMinutes, historicalMinutes }) {
   return (
     <section className="fade-up">
       <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-3">Tus horas y tu saldo</h2>
@@ -23,6 +23,14 @@ export default function SummaryCards({ week: w }) {
           <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Saldo a cobrar</p>
           <p className="font-mono text-xl font-bold text-emerald-600">{fmtMoney(w.estimated_total)}</p>
           <p className="text-[11px] text-slate-400">{balanceHint(w)}</p>
+        </div>
+        <div className="col-span-2 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-3" data-testid="employee-total-hours-card">
+          <History className="w-5 h-5 text-slate-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Horas totales (histórico)</p>
+            <p className="text-[11px] text-slate-400">{historicalMinutes > 0 ? `Incluye ${fmtMinutes(historicalMinutes)} de meses anteriores` : "Todo lo que has grabado desde que empezaste"}</p>
+          </div>
+          <p className="font-mono text-xl font-bold text-slate-800">{Math.round((globalMinutes / 60) * 100) / 100} h</p>
         </div>
       </div>
     </section>

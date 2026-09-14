@@ -150,7 +150,10 @@ async def build_global_ranking():
     pipeline = [{"$group": {"_id": "$worker_id", "minutes": {"$sum": "$minutes"}}}]
     agg = await db.entries.aggregate(pipeline).to_list(10000)
     minutes_by = {a["_id"]: a["minutes"] for a in agg}
-    rows = [{"id": w["id"], "name": w["name"], "minutes": minutes_by.get(w["id"], 0)} for w in workers]
+    rows = [
+        {"id": w["id"], "name": w["name"], "minutes": minutes_by.get(w["id"], 0) + int(w.get("historical_minutes") or 0)}
+        for w in workers
+    ]
     rows.sort(key=lambda r: (-r["minutes"], r["name"].lower()))
     for i, r in enumerate(rows):
         r["rank"] = i + 1 if r["minutes"] > 0 else None
@@ -166,6 +169,7 @@ class WorkerBody(BaseModel):
     name: str
     code: Optional[str] = None
     binance_pay_id: Optional[str] = None
+    historical_hours: Optional[float] = None
 
 
 def clean_binance(value: Optional[str]) -> Optional[str]:
@@ -218,7 +222,8 @@ async def list_workers(admin=Depends(require_admin)):
     total_min = {a["_id"]: a["minutes"] for a in agg}
     for w in workers:
         w["week_minutes"] = week_min.get(w["id"], 0)
-        w["total_minutes"] = total_min.get(w["id"], 0)
+        w["historical_minutes"] = int(w.get("historical_minutes") or 0)
+        w["total_minutes"] = total_min.get(w["id"], 0) + w["historical_minutes"]
     return workers
 
 
@@ -240,6 +245,7 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
         "role": "worker",
         "active": True,
         "binance_pay_id": clean_binance(body.binance_pay_id) or "",
+        "historical_minutes": int(round(max(0.0, body.historical_hours or 0.0) * 60)),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(doc)
@@ -266,6 +272,10 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
         updates["code"] = code
     if body.binance_pay_id is not None:
         updates["binance_pay_id"] = clean_binance(body.binance_pay_id)
+    if body.historical_hours is not None:
+        if body.historical_hours < 0:
+            raise HTTPException(status_code=400, detail="Las horas históricas no pueden ser negativas")
+        updates["historical_minutes"] = int(round(body.historical_hours * 60))
     if updates:
         await db.users.update_one({"id": worker_id}, {"$set": updates})
     return await db.users.find_one({"id": worker_id}, {"_id": 0})
@@ -530,6 +540,7 @@ async def me_dashboard(user=Depends(get_current_user)):
         },
         "global_rank": my_global["rank"] if my_global else None,
         "global_minutes": my_global["minutes"] if my_global else 0,
+        "historical_minutes": int(user.get("historical_minutes") or 0),
         "weekly": weekly,
         "global": global_ranking,
         "entries": entries[:30],

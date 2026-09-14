@@ -58,6 +58,7 @@ export default function WorkersTab() {
                 </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Semana: <span className="font-mono font-bold text-sky-600">{fmtMinutes(w.week_minutes)}</span> · Total: <span className="font-mono font-bold text-slate-600">{fmtMinutes(w.total_minutes)}</span>
+                  {w.historical_minutes > 0 && <span data-testid={`worker-historical-${w.id}`}> · Histórico: <span className="font-mono font-bold text-slate-500">{fmtMinutes(w.historical_minutes)}</span></span>}
                 </p>
               </div>
               <button data-testid={`worker-edit-${w.id}`} onClick={() => setEditWorker(w)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 transition">
@@ -99,12 +100,14 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
   const [name, setName] = useState(worker?.name || "");
   const [code, setCode] = useState("");
   const [binance, setBinance] = useState(worker?.binance_pay_id || "");
+  const [histHours, setHistHours] = useState(worker?.historical_minutes ? String(Math.round((worker.historical_minutes / 60) * 100) / 100) : "");
+  const historical_hours = histHours === "" ? undefined : parseFloat(histHours);
 
   const save = useMutation({
     mutationFn: () =>
       worker
-        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance })
-        : api.post("/admin/workers", { name, code, binance_pay_id: binance }),
+        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance, historical_hours: histHours === "" ? 0 : historical_hours })
+        : api.post("/admin/workers", { name, code, binance_pay_id: binance, historical_hours }),
     onSuccess: () => {
       toast.success(worker ? "Miembro actualizado" : "Miembro creado");
       qc.invalidateQueries({ queryKey: ["workers"] });
@@ -152,6 +155,18 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
               placeholder="Ej. 123456789 · se puede agregar después"
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Horas históricas (opcional)</label>
+            <input
+              data-testid={`worker-historical-input-${testId}`}
+              value={histHours}
+              onChange={(e) => setHistHours(e.target.value.replace(/[^\d.]/g, "").slice(0, 8))}
+              placeholder="Ej. 120.5"
+              inputMode="decimal"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">Horas de meses anteriores ya pagadas. Solo suman al ranking global y al total del miembro; no afectan pagos ni ranking semanal.</p>
           </div>
           <button
             data-testid={`worker-save-button-${testId}`}

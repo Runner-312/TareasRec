@@ -18,3 +18,7 @@
 
 ## 2026-06 — Eliminar registros
 - DELETE /api/admin/entries/{id} (admin). Pestaña Registros: botón papelera por registro con confirmación; refresca stats/rankings/pagos.
+
+## 2026-06 — Horas históricas
+- Campo historical_hours (guardado como historical_minutes) al crear/editar miembro. Suma solo al ranking global, total del miembro (admin) y tarjeta 'Horas totales (histórico)' en panel miembro. No afecta semana, pagos ni ranking semanal.
+- Textos aclaran: ranking semanal = bonos; ranking global = histórico sin premios.
