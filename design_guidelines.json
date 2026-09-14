@@ -1,0 +1,166 @@
+{
+  "project_title": "Panel de Control de Tareas del Hogar - Wuilber Admin & Empleadas",
+  "app_type": "hybrid_fullstack_mobile_first",
+  "language": "es",
+  "design_archetype": "Swiss Tactical Performance - Azul Celeste y Azul Oscuro",
+  "theme": {
+    "mode": "light_and_dark_adaptive",
+    "primary_dark": "#0B132B",
+    "secondary_dark": "#1C2541",
+    "card_dark": "#111D37",
+    "sky_blue_primary": "#0EA5E9",
+    "sky_blue_bright": "#38BDF8",
+    "sky_blue_light": "#E0F2FE",
+    "sky_blue_hover": "#0284C7",
+    "navy_text": "#0F172A",
+    "navy_muted": "#475569",
+    "bg_light": "#F8FAFC",
+    "card_light": "#FFFFFF",
+    "border_light": "#E2E8F0",
+    "border_dark": "#1E293B",
+    "accent_gold": "#F59E0B",
+    "accent_silver": "#94A3B8",
+    "accent_bronze": "#D97706",
+    "success_green": "#10B981"
+  },
+  "typography": {
+    "font_family_headers": "Outfit, sans-serif",
+    "font_family_body": "Plus Jakarta Sans, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "scale": {
+      "h1": "text-3xl sm:text-4xl font-extrabold tracking-tight",
+      "h2": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "subtitle": "text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "caption": "text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500",
+      "mono_metric": "font-mono font-bold tracking-tight text-sky-600 dark:text-sky-400"
+    }
+  },
+  "layout_and_navigation": {
+    "mobile_first": true,
+    "max_container_width": "max-w-md md:max-w-4xl mx-auto px-4 sm:px-6 py-6",
+    "admin_layout": "Responsive tabbed dashboard & pull-down quick actions for Wuilber. Includes week pagination controls (Semana Anterior / Semana Siguiente) for date range Wednesday to Tuesday.",
+    "employee_layout": "Single-page continuous vertical scroll layout. Navigation top bar with PIN exit/switch, smooth scroll sections: (1) Bienvenida, (2) Registrar Minutos & Captura, (3) Resumen de Horas & Saldo, (4) Meta de 10 Horas Motivacional, (5) Ranking Semanal y Global, (6) Calendario de Pagos.",
+    "header_style": "Sticky top bar with backdrop-blur-md bg-slate-900/90 text-white z-50 border-b border-slate-800 px-4 py-3 flex justify-between items-center"
+  },
+  "roles_and_features": {
+    "auth": {
+      "type": "4-digit PIN lock screen",
+      "admin_pin": "9999",
+      "demo_employee_pins": ["1001", "1002", "1003", "1004", "1005", "1006", "1007", "1008", "1009", "1010", "1011", "1012", "1013", "1014", "1015", "1016"],
+      "ui": "Big high-contrast keypad / digit indicator dots (4 slots), instant error feedback vibration effect & clear button"
+    },
+    "admin_panel": {
+      "title": "Panel de Administración - Wuilber",
+      "sections": [
+        {
+          "name": "Gestión de Empleadas",
+          "description": "Lista de las 16 trabajadoras con su código PIN de 4 dígitos, estado (activa/inactiva), opción para agregar nueva empleada o eliminar empleada, y editar PIN."
+        },
+        {
+          "name": "Estadísticas del Equipo & Gráfico Minimalista",
+          "description": "Gráfico lineal minimalista con eje X: días de Miércoles a Martes (Mié, Jue, Vie, Sáb, Dom, Lun, Mar), eje Y: minutos grabados. Muestra tooltip interactivo y curva suave en tono azul celeste (#0EA5E9). Encima del gráfico: métricas clave de la semana (Total Minutos, Total Horas, Promedio Diario, Empleadas Activas). Botones para saltar de semana: '< Semana Anterior' y 'Semana Siguiente >' mostrando las fechas exactas."
+        },
+        {
+          "name": "Rankings (Semanal y Global)",
+          "description": "Tablas de clasificación por horas trabajadas. CRÍTICO: Sin círculos de fotos de perfil. En su lugar se usan insignias numéricas elegantes (#1 dorado, #2 plateado, #3 bronce, 4-16 en badge gris), nombre de la trabajadora, total de minutos/horas y bono correspondiente."
+        },
+        {
+          "name": "Cálculo de Pagos y Bonos",
+          "description": "Regla de liquidación: >10 horas/semana (600 mins) = Horas × $0.30/hora (o proporcional). Bonos de Ranking: 1er lugar +30%, 2do lugar +20%, 3er lugar +10%. Tarjetas resumen de 'Total Pagado' vs 'Total Pendiente' con botón de acción 'Marcar como Pagado'."
+        }
+      ]
+    },
+    "employee_panel": {
+      "title": "Panel de Empleada - Vista Única Vertical",
+      "sections": [
+        {
+          "id": "bienvenida",
+          "title": "¡Bienvenida, [Nombre]!",
+          "description": "Saludo personalizado con estado actual del día, código personal y badge de estado."
+        },
+        {
+          "id": "registro-minutos",
+          "title": "Registrar Tareas del Día",
+          "description": "Formulario intuitivo para ingresar minutos del día + selector o zona dropzone para subir captura de pantalla (screenshot de verificación). Botón 'Guardar Registro'."
+        },
+        {
+          "id": "resumen-horas-saldo",
+          "title": "Tus Horas y Saldo a Cobrar",
+          "description": "Tarjetas duales con diseño destacado: (1) Horas acumuladas esta semana, (2) Saldo estimado a cobrar ($ USD) desglosado con tarifa base y bono."
+        },
+        {
+          "id": "meta-motivacional",
+          "title": "Meta Semanal: 10 Horas",
+          "description": "Barra de progreso dinámica e interactiva que indica la distancia hacia la meta de 10 horas (600 minutos) para habilitar el pago y los bonos. Mensajes motivacionales personalizados según el % alcanzado (e.g. '¡Estás a solo 2 horas de desbloquear tu pago!')."
+        },
+        {
+          "id": "ranking-empleada",
+          "title": "Tu Posición en el Ranking",
+          "description": "Vista simplificada de ranking semanal y ranking global destacando la posición de la empleada actual. Sin foto de perfil, con insignias de puesto."
+        },
+        {
+          "id": "calendario-pagos",
+          "title": "Calendario de Ciclo de Pago",
+          "description": "Calendario visual interactivo destacando los días de corte (Miércoles a Martes en azul celeste) y el día de pago semanal (el siguiente Lunes en verde o dorado con ícono de billete/check)."
+        }
+      ]
+    }
+  },
+  "component_rules": {
+    "ranking_list": {
+      "forbidden": "NO PROFILE PHOTO CIRCLES / NO AVATARS. Strictly prohibited by user preferences.",
+      "allowed": "Rank badges with high contrast background, custom rank numbers (#1, #2, #3, #4...), metallic gradient pills for top 3, bold text name, recorded hours badge."
+    },
+    "chart": {
+      "type": "Minimalist Area / Line Chart using Recharts",
+      "stroke": "#0EA5E9",
+      "stroke_width": 3,
+      "fill_gradient": "url(#skyGradient)",
+      "x_axis_data_key": "day",
+      "days_order": ["Mié", "Jue", "Vie", "Sáb", "Dom", "Lun", "Mar"]
+    },
+    "buttons": {
+      "primary": "bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-semibold rounded-xl shadow-lg shadow-sky-500/20 transition-all duration-200 py-3 px-5 text-center cursor-pointer",
+      "secondary": "bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl py-3 px-5 font-medium transition-all duration-200",
+      "admin_action": "bg-slate-900 text-sky-400 hover:bg-slate-800 border border-sky-500/30 rounded-xl py-2 px-4 text-sm font-semibold"
+    }
+  },
+  "image_urls": {
+    "hero_mobile_recording": "https://images.unsplash.com/photo-1543525469-65b61cc2bc06?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwyfHxob3VzZWhvbGQlMjB0YXNrcyUyMHJlY29yZGluZyUyMHZpZGVvJTIwbW9iaWxlJTIwcGhvbmV8ZW58MHx8fHwxNzg5MzYzODU1fDA&ixlib=rb-4.1.0&q=85",
+    "phone_screen_proof": "https://images.unsplash.com/photo-1452993912631-49cff82efb5e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxob3VzZWhvbGQlMjB0YXNrcyUyMHJlY29yZGluZyUyMHZpZGVvJTIwbW9iaWxlJTIwcGhvbmV8ZW58MHx8fHwxNzg5MzYzODU1fDA&ixlib=rb-4.1.0&q=85",
+    "tripod_recording_task": "https://images.unsplash.com/photo-1579247289026-3ce70fe08799?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHw0fHxob3VzZWhvbGQlMjB0YXNrcyUyMHJlY29yZGluZyUyMHZpZGVvJTIwbW9iaWxlJTIwcGhvbmV8ZW58MHx8fHwxNzg5MzYzODU1fDA&ixlib=rb-4.1.0&q=85"
+  },
+  "testing_attributes": {
+    "rule": "Every button, input, tab, card, line chart container, pin digit key, and summary metric MUST contain explicit kebab-case data-testid attributes.",
+    "examples": [
+      "data-testid=\"pin-input-key-1\"",
+      "data-testid=\"pin-submit-button\"",
+      "data-testid=\"admin-tab-employees\"",
+      "data-testid=\"admin-tab-stats\"",
+      "data-testid=\"admin-tab-payments\"",
+      "data-testid=\"prev-week-button\"",
+      "data-testid=\"next-week-button\"",
+      "data-testid=\"minimalist-line-chart\"",
+      "data-testid=\"employee-minutes-input\"",
+      "data-testid=\"screenshot-upload-input\"",
+      "data-testid=\"submit-minutes-button\"",
+      "data-testid=\"goal-progress-bar\"",
+      "data-testid=\"payment-calendar-grid\"",
+      "data-testid=\"weekly-ranking-list\"",
+      "data-testid=\"global-ranking-list\"",
+      "data-testid=\"employee-add-button\""
+    ]
+  },
+  "instructions_to_main_agent": [
+    "1. Keep all UI strings natively in Spanish (Panel de Administrador, Wuilber, Miércoles a Martes, Saldo a Cobrar, Meta de 10 Horas, Captura de Pantalla, etc.).",
+    "2. Strict design choice compliance: Use Sky Blue (#0EA5E9 / #38BDF8) & Dark Navy Blue (#0B132B / #0F172A) as the main brand identity.",
+    "3. Explicitly NO profile pictures or avatar circles in ranking lists (weekly and global). Use numbered rank badges or metallic rank indicators instead.",
+    "4. Admin minimalist line chart must display Wednesday to Tuesday cycle (Mié, Jue, Vie, Sáb, Dom, Lun, Mar) with week pagination buttons and weekly top stats displayed right above the chart.",
+    "5. Employee panel MUST be built on a single vertical page with continuous scrolling, featuring all required sections in logical flow.",
+    "6. Payment logic: >10 hours/week threshold = hours × $0.30/hr base rate. Ranking bonuses: 1st (+30%), 2nd (+20%), 3rd (+10%). Display Total Paid vs Pending with action to resolve pending payments.",
+    "7. Include default sample mock data with 16 Spanish employee names (e.g. Maria, Sofia, Ana, Carmen, Rosa, Elena, Lucia, Laura, Patricia, Isabel, Marta, Teresa, Beatriz, Yolanda, Dolores, Cristina) and pre-populated daily recorded minutes.",
+    "8. Ensure mobile-first touch optimization (large PIN buttons, responsive touch targets, smooth sonner toasts)."
+  ]
+}
