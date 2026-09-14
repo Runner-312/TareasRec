@@ -57,7 +57,6 @@ export default function StatsTab() {
         <>
           <div className="grid grid-cols-2 gap-3" data-testid="week-stats-cards">
             <Stat label="Minutos totales" value={fmtMinutes(data.totals.minutes)} mono />
-            <Stat label="Horas totales" value={`${data.totals.hours} h`} mono />
             <Stat label="Promedio diario" value={fmtMinutes(data.totals.avg_per_day)} mono />
             <Stat label="Miembros activos" value={data.totals.active_workers} mono />
           </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Pencil, Trash2, KeyRound } from "lucide-react";
+import { UserPlus, Pencil, Trash2, KeyRound, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import api, { fmtMinutes } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -52,6 +52,10 @@ export default function WorkersTab() {
                 <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
                   <KeyRound className="w-3 h-3" /> Código: <span className="font-mono font-bold text-slate-600">{w.code}</span>
                 </p>
+                <p className="text-xs text-slate-400 font-medium flex items-center gap-1" data-testid={`worker-binance-${w.id}`}>
+                  <Wallet className="w-3 h-3" /> Binance Pay:{" "}
+                  {w.binance_pay_id ? <span className="font-mono font-bold text-slate-600">{w.binance_pay_id}</span> : <span className="italic text-amber-500">sin agregar</span>}
+                </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Semana: <span className="font-mono font-bold text-sky-600">{fmtMinutes(w.week_minutes)}</span> · Total: <span className="font-mono font-bold text-slate-600">{fmtMinutes(w.total_minutes)}</span>
                 </p>
@@ -94,12 +98,13 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
   const qc = useQueryClient();
   const [name, setName] = useState(worker?.name || "");
   const [code, setCode] = useState("");
+  const [binance, setBinance] = useState(worker?.binance_pay_id || "");
 
   const save = useMutation({
     mutationFn: () =>
       worker
-        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined })
-        : api.post("/admin/workers", { name, code }),
+        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance })
+        : api.post("/admin/workers", { name, code, binance_pay_id: binance }),
     onSuccess: () => {
       toast.success(worker ? "Miembro actualizado" : "Miembro creado");
       qc.invalidateQueries({ queryKey: ["workers"] });
@@ -136,6 +141,16 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
               placeholder={worker ? "••••" : "Ej. 4521"}
               inputMode="numeric"
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Binance Pay ID (opcional)</label>
+            <input
+              data-testid={`worker-binance-input-${testId}`}
+              value={binance}
+              onChange={(e) => setBinance(e.target.value.trim().slice(0, 40))}
+              placeholder="Ej. 123456789 · se puede agregar después"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
           <button

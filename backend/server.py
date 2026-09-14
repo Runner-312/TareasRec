@@ -165,6 +165,13 @@ class LoginBody(BaseModel):
 class WorkerBody(BaseModel):
     name: str
     code: Optional[str] = None
+    binance_pay_id: Optional[str] = None
+
+
+def clean_binance(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    return value.strip()[:40]
 
 
 class PaymentBody(BaseModel):
@@ -232,6 +239,7 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
         "code": code,
         "role": "worker",
         "active": True,
+        "binance_pay_id": clean_binance(body.binance_pay_id) or "",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(doc)
@@ -256,6 +264,8 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
         if existing:
             raise HTTPException(status_code=400, detail="Ese código ya está en uso")
         updates["code"] = code
+    if body.binance_pay_id is not None:
+        updates["binance_pay_id"] = clean_binance(body.binance_pay_id)
     if updates:
         await db.users.update_one({"id": worker_id}, {"$set": updates})
     return await db.users.find_one({"id": worker_id}, {"_id": 0})
