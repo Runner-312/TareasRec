@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Delete, Video } from "lucide-react";
 import { toast } from "sonner";
@@ -14,29 +14,24 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (pin.length === 4) {
-      const doLogin = async () => {
-        setLoading(true);
-        try {
-          const { data } = await api.post("/auth/login", { code: pin });
-          login(data.token, data.user);
-          toast.success(`¡Bienvenido, ${data.user.name}!`);
-          navigate(data.user.role === "admin" ? "/admin" : "/panel", { replace: true });
-        } catch (e) {
-          setError(true);
-          toast.error(e.response?.data?.detail || "Código incorrecto");
-          setTimeout(() => {
-            setPin("");
-            setError(false);
-          }, 450);
-        } finally {
-          setLoading(false);
-        }
-      };
-      doLogin();
+  const doLogin = useCallback(async (code) => {
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/login", { code });
+      login(data.token, data.user);
+      toast.success(`¡Bienvenido, ${data.user.name}!`);
+      navigate(data.user.role === "admin" ? "/admin" : "/panel", { replace: true });
+    } catch (e) {
+      setError(true);
+      toast.error(e.response?.data?.detail || "Código incorrecto");
+      setTimeout(() => {
+        setPin("");
+        setError(false);
+      }, 450);
+    } finally {
+      setLoading(false);
     }
-  }, [pin]);
+  }, [login, navigate]);
 
   const press = (k) => {
     if (loading) return;
@@ -44,7 +39,10 @@ export default function LoginPage() {
       setPin((p) => p.slice(0, -1));
       return;
     }
-    if (k && pin.length < 4) setPin((p) => p + k);
+    if (!k || pin.length >= 4) return;
+    const next = pin + k;
+    setPin(next);
+    if (next.length === 4) doLogin(next);
   };
 
   return (

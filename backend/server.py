@@ -354,7 +354,7 @@ async def admin_overview(admin=Depends(require_admin)):
         if calc["total"] > 0:
             pending.append({
                 "worker_id": wid,
-                "name": workers.get(wid, {}).get("name", "Eliminada"),
+                "name": workers.get(wid, {}).get("name", "Eliminado"),
                 "week_start": ws.isoformat(),
                 "week_end": (ws + timedelta(days=6)).isoformat(),
                 "minutes": m,
