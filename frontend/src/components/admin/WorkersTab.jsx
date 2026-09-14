@@ -20,7 +20,7 @@ export default function WorkersTab() {
   const del = useMutation({
     mutationFn: (id) => api.delete(`/admin/workers/${id}`),
     onSuccess: () => {
-      toast.success("Empleada eliminada");
+      toast.success("Miembro eliminado");
       setDeleteWorker(null);
       qc.invalidateQueries({ queryKey: ["workers"] });
     },
@@ -34,14 +34,14 @@ export default function WorkersTab() {
         onClick={() => setAddOpen(true)}
         className="w-full flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold rounded-xl py-3.5 shadow-lg shadow-sky-500/25 transition-all"
       >
-        <UserPlus className="w-5 h-5" /> Agregar empleada
+        <UserPlus className="w-5 h-5" /> Agregar miembro
       </button>
 
       {isLoading ? (
         <p className="text-center text-slate-400 py-8 text-sm">Cargando…</p>
       ) : workers.length === 0 ? (
         <p className="text-sm text-slate-400 bg-white rounded-2xl border border-slate-100 p-6 text-center" data-testid="no-workers-message">
-          Aún no hay empleadas. Agrega la primera con el botón de arriba.
+          Aún no hay miembros. Agrega el primero con el botón de arriba.
         </p>
       ) : (
         <div className="space-y-2" data-testid="workers-list">
@@ -67,7 +67,7 @@ export default function WorkersTab() {
         </div>
       )}
 
-      <WorkerForm open={addOpen} onClose={() => setAddOpen(false)} title="Nueva empleada" testId="add" />
+      <WorkerForm open={addOpen} onClose={() => setAddOpen(false)} title="Nuevo miembro" testId="add" />
       {editWorker && <WorkerForm open onClose={() => setEditWorker(null)} title={`Editar: ${editWorker.name}`} worker={editWorker} testId="edit" />}
 
       <AlertDialog open={!!deleteWorker} onOpenChange={() => setDeleteWorker(null)}>
@@ -101,7 +101,7 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
         ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined })
         : api.post("/admin/workers", { name, code }),
     onSuccess: () => {
-      toast.success(worker ? "Empleada actualizada" : "Empleada creada");
+      toast.success(worker ? "Miembro actualizado" : "Miembro creado");
       qc.invalidateQueries({ queryKey: ["workers"] });
       onClose();
     },

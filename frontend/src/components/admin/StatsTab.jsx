@@ -59,17 +59,17 @@ export default function StatsTab() {
             <Stat label="Minutos totales" value={fmtMinutes(data.totals.minutes)} mono />
             <Stat label="Horas totales" value={`${data.totals.hours} h`} mono />
             <Stat label="Promedio diario" value={fmtMinutes(data.totals.avg_per_day)} mono />
-            <Stat label="Empleadas activas" value={data.totals.active_workers} mono />
+            <Stat label="Miembros activos" value={data.totals.active_workers} mono />
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Minutos por día (Mié → Mar)</p>
             <WeekChart days={data.days} workers={data.workers_chart} />
-            <p className="text-[11px] text-slate-400 mt-2">La línea gruesa celeste es el total del equipo; las delgadas, cada empleada.</p>
+            <p className="text-[11px] text-slate-400 mt-2">La línea gruesa celeste es el total del equipo; las delgadas, cada miembro.</p>
           </div>
 
           <div>
-            <h3 className="font-bold text-slate-800 mb-3 text-base">Detalle por empleada</h3>
+            <h3 className="font-bold text-slate-800 mb-3 text-base">Detalle por miembro</h3>
             <div className="space-y-2" data-testid="week-workers-table">
               {data.table.map((r) => (
                 <div key={r.id} data-testid={`week-worker-row-${r.id}`} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
@@ -104,7 +104,7 @@ export default function StatsTab() {
                   )}
                 </div>
               ))}
-              {data.table.length === 0 && <p className="text-sm text-slate-400 text-center py-4">Aún no has agregado empleadas.</p>}
+              {data.table.length === 0 && <p className="text-sm text-slate-400 text-center py-4">Aún no has agregado miembros.</p>}
             </div>
           </div>
         </>

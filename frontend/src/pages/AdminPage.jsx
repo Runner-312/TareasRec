@@ -12,7 +12,7 @@ const TABS = [
   { id: "resumen", label: "Resumen", icon: LayoutDashboard },
   { id: "grafico", label: "Gráfico", icon: LineChartIcon },
   { id: "rankings", label: "Rankings", icon: Trophy },
-  { id: "empleadas", label: "Empleadas", icon: Users },
+  { id: "miembros", label: "Miembros", icon: Users },
   { id: "registros", label: "Registros", icon: ClipboardList },
 ];
 
@@ -61,7 +61,7 @@ export default function AdminPage() {
         {tab === "resumen" && <OverviewTab />}
         {tab === "grafico" && <StatsTab />}
         {tab === "rankings" && <RankingsTab />}
-        {tab === "empleadas" && <WorkersTab />}
+        {tab === "miembros" && <WorkersTab />}
         {tab === "registros" && <EntriesTab />}
       </main>
     </div>

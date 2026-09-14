@@ -243,7 +243,7 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
 async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_admin)):
     worker = await db.users.find_one({"id": worker_id, "role": "worker"})
     if not worker:
-        raise HTTPException(status_code=404, detail="Empleada no encontrada")
+        raise HTTPException(status_code=404, detail="Miembro no encontrado")
     updates = {}
     name = body.name.strip()
     if name:
@@ -265,7 +265,7 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
 async def delete_worker(worker_id: str, admin=Depends(require_admin)):
     result = await db.users.delete_one({"id": worker_id, "role": "worker"})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Empleada no encontrada")
+        raise HTTPException(status_code=404, detail="Miembro no encontrado")
     return {"deleted": True}
 
 
@@ -431,7 +431,7 @@ async def create_entry(
     user=Depends(get_current_user),
 ):
     if user.get("role") != "worker":
-        raise HTTPException(status_code=403, detail="Solo empleadas")
+        raise HTTPException(status_code=403, detail="Solo miembros")
     if minutes <= 0 or minutes > 1440:
         raise HTTPException(status_code=400, detail="Minutos inválidos")
     today = date.today().isoformat()
@@ -466,7 +466,7 @@ async def create_entry(
 @api_router.get("/me/dashboard")
 async def me_dashboard(user=Depends(get_current_user)):
     if user.get("role") != "worker":
-        raise HTTPException(status_code=403, detail="Solo empleadas")
+        raise HTTPException(status_code=403, detail="Solo miembros")
     today = date.today()
     ws = week_start_of(today)
     we = ws + timedelta(days=6)
@@ -483,8 +483,13 @@ async def me_dashboard(user=Depends(get_current_user)):
     global_ranking = await build_global_ranking()
     my_global = next((g for g in global_ranking if g["id"] == user["id"]), None)
     remaining = max(0, GOAL_MINUTES - week_minutes)
+    days = []
+    for i in range(7):
+        d = (ws + timedelta(days=i)).isoformat()
+        days.append({"date": d, "label": DAY_LABELS[i], "total": sum(e["minutes"] for e in entries if e["date"] == d)})
     return {
         "name": user["name"],
+        "days": days,
         "today": {
             "registered": today_entry is not None,
             "minutes": today_entry["minutes"] if today_entry else 0,

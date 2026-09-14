@@ -7,6 +7,7 @@ import { useAuth } from "@/App";
 import api, { fileUrl, fmtMoney, fmtMinutes, fmtDate } from "@/lib/api";
 import RankingList from "@/components/RankingList";
 import PayCalendar from "@/components/PayCalendar";
+import MyWeekChart from "@/components/MyWeekChart";
 
 export default function EmployeePage() {
   const { user, logout } = useAuth();
@@ -164,6 +165,12 @@ export default function EmployeePage() {
               </p>
             </div>
           </div>
+        </section>
+
+        <section className="fade-up bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-lg font-bold text-slate-900 mb-1">Tus minutos de la semana</h2>
+          <p className="text-xs text-slate-400 mb-3">Miércoles a martes · minutos registrados por día</p>
+          <MyWeekChart days={data.days} />
         </section>
 
         <section className="fade-up bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
