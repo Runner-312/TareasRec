@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CircleDollarSign, Wallet, Clock } from "lucide-react";
 import { toast } from "sonner";
 import api, { fmtMoney, fmtMinutes, fmtDate } from "@/lib/api";
+import PayoutExport from "@/components/admin/PayoutExport";
 
 export default function OverviewTab() {
   const qc = useQueryClient();
@@ -14,8 +15,7 @@ export default function OverviewTab() {
     mutationFn: (p) => api.post("/admin/payments", { worker_id: p.worker_id, week_start: p.week_start }),
     onSuccess: () => {
       toast.success("Pago marcado como realizado");
-      qc.invalidateQueries({ queryKey: ["overview"] });
-      qc.invalidateQueries({ queryKey: ["week"] });
+      qc.invalidateQueries();
     },
     onError: () => toast.error("No se pudo registrar el pago"),
   });
@@ -44,6 +44,8 @@ export default function OverviewTab() {
           <p className="font-mono text-lg font-bold text-sky-700">{fmtMinutes(data.current_week.minutes)} grabados por el equipo</p>
         </div>
       </div>
+
+      <PayoutExport />
 
       <div>
         <h3 className="font-bold text-slate-800 mb-3 text-base">Pagos pendientes de semanas cerradas</h3>

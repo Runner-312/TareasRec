@@ -22,3 +22,8 @@
 ## 2026-06 — Horas históricas
 - Campo historical_hours (guardado como historical_minutes) al crear/editar miembro. Suma solo al ranking global, total del miembro (admin) y tarjeta 'Horas totales (histórico)' en panel miembro. No afecta semana, pagos ni ranking semanal.
 - Textos aclaran: ranking semanal = bonos; ranking global = histórico sin premios.
+
+## 2026-06 — Pago masivo Binance Pay
+- Plantilla oficial en backend/binance_template.xlsx (openpyxl). GET /api/admin/payments/export (preview JSON), GET /api/admin/payments/export.xlsx (descarga; filas desde la 3: 'Binance ID (BUID)', ID, USDT, monto, nombre en col E Notes), POST /api/admin/payments/mark-all.
+- Un miembro = una fila (suma sus semanas pendientes). Excluidos: sin Binance ID o < 0.50 USDT (se avisa en UI).
+- Componente admin/PayoutExport.jsx en pestaña Resumen.

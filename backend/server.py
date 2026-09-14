@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+import io
 import uuid
 import asyncio
 import logging
@@ -9,6 +10,7 @@ from datetime import datetime, timezone, timedelta, date
 from typing import Optional
 
 import jwt
+import openpyxl
 import requests
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -72,6 +74,8 @@ DAY_LABELS = ["Mié", "Jue", "Vie", "Sáb", "Dom", "Lun", "Mar"]
 BONUS = {1: 0.30, 2: 0.20, 3: 0.10}
 RATE_PER_HOUR = 0.30
 GOAL_MINUTES = 600
+PAYOUT_CURRENCY = "USDT"
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "binance_template.xlsx")
 
 
 def week_start_of(d: date) -> date:
@@ -346,6 +350,10 @@ async def admin_rankings(admin=Depends(require_admin)):
 
 @api_router.get("/admin/overview")
 async def admin_overview(admin=Depends(require_admin)):
+    return await build_overview()
+
+
+async def build_overview():
     today = date.today()
     entries = await db.entries.find({}, {"_id": 0}).to_list(100000)
     workers = {w["id"]: w for w in await db.users.find({"role": "worker"}, {"_id": 0}).to_list(1000)}
@@ -375,6 +383,7 @@ async def admin_overview(admin=Depends(require_admin)):
             pending.append({
                 "worker_id": wid,
                 "name": workers.get(wid, {}).get("name", "Eliminado"),
+                "binance_pay_id": workers.get(wid, {}).get("binance_pay_id", ""),
                 "week_start": ws.isoformat(),
                 "week_end": (ws + timedelta(days=6)).isoformat(),
                 "minutes": m,
@@ -398,21 +407,25 @@ async def admin_overview(admin=Depends(require_admin)):
 
 @api_router.post("/admin/payments")
 async def mark_paid(body: PaymentBody, admin=Depends(require_admin)):
+    return await mark_week_paid(body.worker_id, body.week_start)
+
+
+async def mark_week_paid(worker_id: str, week_start: str):
     try:
-        ws = week_start_of(date.fromisoformat(body.week_start))
+        ws = week_start_of(date.fromisoformat(week_start))
     except ValueError:
         raise HTTPException(status_code=400, detail="Fecha inválida")
     rows, _ = await build_week_table(ws)
-    row = next((r for r in rows if r["id"] == body.worker_id), None)
+    row = next((r for r in rows if r["id"] == worker_id), None)
     if row is None:
-        entries = await db.entries.find({"worker_id": body.worker_id}, {"_id": 0}).to_list(100000)
+        entries = await db.entries.find({"worker_id": worker_id}, {"_id": 0}).to_list(100000)
         we = ws + timedelta(days=6)
         m = sum(e["minutes"] for e in entries if ws.isoformat() <= e["date"] <= we.isoformat())
         calc = calc_payment(m, None)
         row = {"rank": None, **calc}
     doc = {
         "id": str(uuid.uuid4()),
-        "worker_id": body.worker_id,
+        "worker_id": worker_id,
         "week_start": ws.isoformat(),
         "amount": row["total"],
         "base": row["base"],
@@ -421,11 +434,74 @@ async def mark_paid(body: PaymentBody, admin=Depends(require_admin)):
         "paid_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.payments.update_one(
-        {"worker_id": body.worker_id, "week_start": ws.isoformat()},
+        {"worker_id": worker_id, "week_start": ws.isoformat()},
         {"$set": doc},
         upsert=True,
     )
     return doc
+
+
+def payout_rows(pending):
+    by_worker = {}
+    for p in pending:
+        r = by_worker.setdefault(p["worker_id"], {"worker_id": p["worker_id"], "name": p["name"], "binance_pay_id": p["binance_pay_id"], "total": 0.0, "weeks": []})
+        r["total"] = round(r["total"] + p["total"], 2)
+        r["weeks"].append(p["week_start"])
+    rows = sorted(by_worker.values(), key=lambda r: r["name"].lower())
+    for r in rows:
+        r["ready"] = bool(r["binance_pay_id"]) and r["total"] >= 0.5
+        r["issue"] = None if r["ready"] else ("Sin Binance Pay ID" if not r["binance_pay_id"] else "Monto menor a 0.50 USDT")
+    return rows
+
+
+@api_router.get("/admin/payments/export")
+async def payout_preview(admin=Depends(require_admin)):
+    overview = await build_overview()
+    rows = payout_rows(overview["pending"])
+    ready = [r for r in rows if r["ready"]]
+    return {
+        "rows": rows,
+        "ready_count": len(ready),
+        "ready_total": round(sum(r["total"] for r in ready), 2),
+        "currency": PAYOUT_CURRENCY,
+    }
+
+
+@api_router.get("/admin/payments/export.xlsx")
+async def payout_xlsx(admin=Depends(require_admin)):
+    overview = await build_overview()
+    rows = [r for r in payout_rows(overview["pending"]) if r["ready"]]
+    if not rows:
+        raise HTTPException(status_code=400, detail="No hay pagos listos para exportar")
+    wb = openpyxl.load_workbook(TEMPLATE_PATH)
+    ws = wb.active
+    for i, r in enumerate(rows[:250]):
+        row = 3 + i
+        ws.cell(row=row, column=1, value="Binance ID (BUID)")
+        ws.cell(row=row, column=2, value=r["binance_pay_id"])
+        ws.cell(row=row, column=3, value=PAYOUT_CURRENCY)
+        ws.cell(row=row, column=4, value=r["total"])
+        ws.cell(row=row, column=5, value=r["name"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    filename = f"binance_pay_{date.today().isoformat()}.xlsx"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/admin/payments/mark-all")
+async def mark_all_paid(admin=Depends(require_admin)):
+    overview = await build_overview()
+    ready_ids = {r["worker_id"] for r in payout_rows(overview["pending"]) if r["ready"]}
+    count = 0
+    for p in overview["pending"]:
+        if p["worker_id"] in ready_ids:
+            await mark_week_paid(p["worker_id"], p["week_start"])
+            count += 1
+    return {"marked": count}
 
 
 @api_router.delete("/admin/payments")
