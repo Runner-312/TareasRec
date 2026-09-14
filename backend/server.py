@@ -430,8 +430,16 @@ async def admin_entries(admin=Depends(require_admin)):
     entries = await db.entries.find({}, {"_id": 0}).sort("date", -1).to_list(300)
     workers = {w["id"]: w["name"] for w in await db.users.find({"role": "worker"}, {"_id": 0}).to_list(1000)}
     for e in entries:
-        e["worker_name"] = workers.get(e["worker_id"], "Eliminada")
+        e["worker_name"] = workers.get(e["worker_id"], "Eliminado")
     return entries
+
+
+@api_router.delete("/admin/entries/{entry_id}")
+async def delete_entry(entry_id: str, admin=Depends(require_admin)):
+    result = await db.entries.delete_one({"id": entry_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    return {"deleted": True}
 
 
 @api_router.post("/entries")

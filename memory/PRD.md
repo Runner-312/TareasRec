@@ -15,3 +15,6 @@
 ## 2026-06 — Binance Pay + Gráfico
 - Campo opcional binance_pay_id (texto libre, opcional) en crear/editar miembro (POST/PUT /api/admin/workers); visible en lista de miembros como 'Binance Pay: … / sin agregar'.
 - StatsTab: eliminada tarjeta 'Horas totales'; quedan Minutos totales, Promedio diario, Miembros activos.
+
+## 2026-06 — Eliminar registros
+- DELETE /api/admin/entries/{id} (admin). Pestaña Registros: botón papelera por registro con confirmación; refresca stats/rankings/pagos.
