@@ -1,5 +1,7 @@
 import { createContext, useContext, useState } from "react";
 import "@/App.css";
+
+if (localStorage.getItem("theme") === "dark") document.documentElement.classList.add("dark");
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import LoginPage from "@/pages/LoginPage";

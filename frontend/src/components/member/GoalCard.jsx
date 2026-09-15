@@ -29,7 +29,7 @@ export default function GoalCard({ week: w, name }) {
         <div className="mt-3 flex items-start gap-2.5 bg-sky-50 rounded-xl p-3.5" data-testid="motivation-pending">
           <Target className="w-5 h-5 text-sky-500 shrink-0 mt-0.5" />
           <p className="text-sm font-semibold text-sky-800">
-            ¡Vas muy bien, {name}! Te {remaining} para alcanzar las 10 horas y activar tu pago del lunes. ¡Tú puedes lograrlo!
+            ¡Vas muy bien, {name}! Te {remaining} para alcanzar las 10 horas y activar tu pago del martes. ¡Tú puedes lograrlo!
           </p>
         </div>
       )}

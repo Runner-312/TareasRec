@@ -100,14 +100,14 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
   const [name, setName] = useState(worker?.name || "");
   const [code, setCode] = useState("");
   const [binance, setBinance] = useState(worker?.binance_pay_id || "");
-  const [histHours, setHistHours] = useState(worker?.historical_minutes ? String(Math.round((worker.historical_minutes / 60) * 100) / 100) : "");
-  const historical_hours = histHours === "" ? undefined : parseFloat(histHours);
+  const [histMin, setHistMin] = useState(worker?.historical_minutes ? String(worker.historical_minutes) : "");
+  const historical_minutes = histMin === "" ? undefined : parseInt(histMin, 10);
 
   const save = useMutation({
     mutationFn: () =>
       worker
-        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance, historical_hours: histHours === "" ? 0 : historical_hours })
-        : api.post("/admin/workers", { name, code, binance_pay_id: binance, historical_hours }),
+        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance, historical_minutes: histMin === "" ? 0 : historical_minutes })
+        : api.post("/admin/workers", { name, code, binance_pay_id: binance, historical_minutes }),
     onSuccess: () => {
       toast.success(worker ? "Miembro actualizado" : "Miembro creado");
       qc.invalidateQueries({ queryKey: ["workers"] });
@@ -157,16 +157,18 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Horas históricas (opcional)</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Minutos históricos (opcional)</label>
             <input
               data-testid={`worker-historical-input-${testId}`}
-              value={histHours}
-              onChange={(e) => setHistHours(e.target.value.replace(/[^\d.]/g, "").slice(0, 8))}
-              placeholder="Ej. 120.5"
-              inputMode="decimal"
+              value={histMin}
+              onChange={(e) => setHistMin(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              placeholder="Ej. 7230"
+              inputMode="numeric"
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
-            <p className="text-[11px] text-slate-400 mt-1">Horas de meses anteriores ya pagadas. Solo suman al ranking global y al total del miembro; no afectan pagos ni ranking semanal.</p>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {histMin ? `= ${fmtMinutes(parseInt(histMin, 10))} · ` : ""}Minutos de meses anteriores ya pagados. Solo suman al ranking global y al total del miembro; no afectan pagos ni ranking semanal.
+            </p>
           </div>
           <button
             data-testid={`worker-save-button-${testId}`}

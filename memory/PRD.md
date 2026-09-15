@@ -27,3 +27,9 @@
 - Plantilla oficial en backend/binance_template.xlsx (openpyxl). GET /api/admin/payments/export (preview JSON), GET /api/admin/payments/export.xlsx (descarga; filas desde la 3: 'Binance ID (BUID)', ID, USDT, monto, nombre en col E Notes), POST /api/admin/payments/mark-all.
 - Un miembro = una fila (suma sus semanas pendientes). Excluidos: sin Binance ID o < 0.50 USDT (se avisa en UI).
 - Componente admin/PayoutExport.jsx en pestaña Resumen.
+
+## 2026-06 — Calendario, pagos martes, dark mode
+- Pago del bono (0.30/h si >10h) ahora el MARTES (ws+13); KGEN paga el LUNES (ws+12, solo informativo, verde). /me/dashboard devuelve weeks[] (status/paid/qualifies/closed, kgen_payday, bonus_payday) y day_minutes{}.
+- PayCalendar: colores por semana (en curso celeste, próxima celeste punteado, lunes verde, martes amarillo, pendiente amarillo+reloj, pagado gris+check), popover al tocar día, minutos bajo la fecha, navegación por semana y por mes.
+- Histórico ahora se ingresa en MINUTOS (historical_minutes) y se muestra en horas.
+- Modo oscuro: ThemeToggle en login/admin/miembro, clase .dark + overrides CSS en index.css, persistido en localStorage.

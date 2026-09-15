@@ -5,6 +5,7 @@ import { useAuth } from "@/App";
 import api, { fmtDate } from "@/lib/api";
 import PayCalendar from "@/components/PayCalendar";
 import MyWeekChart from "@/components/MyWeekChart";
+import ThemeToggle from "@/components/ThemeToggle";
 import EntryForm from "@/components/member/EntryForm";
 import SummaryCards from "@/components/member/SummaryCards";
 import GoalCard from "@/components/member/GoalCard";
@@ -39,13 +40,16 @@ export default function EmployeePage() {
           </div>
           <p className="text-white font-bold text-sm" data-testid="employee-welcome">¡Hola, {data.name}!</p>
         </div>
-        <button
-          data-testid="employee-logout-button"
-          onClick={() => { logout(); navigate("/login"); }}
-          className="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold bg-slate-800 rounded-xl px-3 py-2 transition-colors"
-        >
-          <LogOut className="w-4 h-4" /> Salir
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            data-testid="employee-logout-button"
+            onClick={() => { logout(); navigate("/login"); }}
+            className="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold bg-slate-800 rounded-xl px-3 py-2 transition-colors"
+          >
+            <LogOut className="w-4 h-4" /> Salir
+          </button>
+        </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-8">
@@ -71,9 +75,9 @@ export default function EmployeePage() {
             <CalendarDays className="w-6 h-6 text-sky-500" /> Calendario de pago
           </h2>
           <p className="text-sm text-slate-500 mb-3">
-            Lo que grabes del <strong>miércoles {fmtDate(w.start)}</strong> al <strong>martes {fmtDate(w.end)}</strong> se paga el <strong className="text-amber-600">lunes {fmtDate(w.payday)}</strong>.
+            Lo que grabes del <strong>miércoles {fmtDate(w.start)}</strong> al <strong>martes {fmtDate(w.end)}</strong>: KGEN paga el <strong className="text-emerald-600">lunes {fmtDate(w.kgen_payday)}</strong> y el bono (si superas 10 h) se paga el <strong className="text-amber-600">martes {fmtDate(w.payday)}</strong>. Toca cualquier día para ver qué significa.
           </p>
-          <PayCalendar weekStart={w.start} weekEnd={w.end} payday={w.payday} />
+          <PayCalendar weeks={data.weeks} dayMinutes={data.day_minutes} currentWeekStart={w.start} />
         </section>
 
         <EntriesList entries={data.entries} />

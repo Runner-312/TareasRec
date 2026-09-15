@@ -173,7 +173,7 @@ class WorkerBody(BaseModel):
     name: str
     code: Optional[str] = None
     binance_pay_id: Optional[str] = None
-    historical_hours: Optional[float] = None
+    historical_minutes: Optional[int] = None
 
 
 def clean_binance(value: Optional[str]) -> Optional[str]:
@@ -249,7 +249,7 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
         "role": "worker",
         "active": True,
         "binance_pay_id": clean_binance(body.binance_pay_id) or "",
-        "historical_minutes": int(round(max(0.0, body.historical_hours or 0.0) * 60)),
+        "historical_minutes": max(0, int(body.historical_minutes or 0)),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.users.insert_one(doc)
@@ -276,10 +276,10 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
         updates["code"] = code
     if body.binance_pay_id is not None:
         updates["binance_pay_id"] = clean_binance(body.binance_pay_id)
-    if body.historical_hours is not None:
-        if body.historical_hours < 0:
-            raise HTTPException(status_code=400, detail="Las horas históricas no pueden ser negativas")
-        updates["historical_minutes"] = int(round(body.historical_hours * 60))
+    if body.historical_minutes is not None:
+        if body.historical_minutes < 0:
+            raise HTTPException(status_code=400, detail="Los minutos históricos no pueden ser negativos")
+        updates["historical_minutes"] = int(body.historical_minutes)
     if updates:
         await db.users.update_one({"id": worker_id}, {"$set": updates})
     return await db.users.find_one({"id": worker_id}, {"_id": 0})
@@ -304,7 +304,7 @@ async def admin_week(start: Optional[str] = None, admin=Depends(require_admin)):
     else:
         ws = week_start_of(date.today())
     we = ws + timedelta(days=6)
-    payday = ws + timedelta(days=12)
+    payday = ws + timedelta(days=13)
     rows, entries = await build_week_table(ws)
     days = []
     for i in range(7):
@@ -574,8 +574,28 @@ async def me_dashboard(user=Depends(get_current_user)):
     today = date.today()
     ws = week_start_of(today)
     we = ws + timedelta(days=6)
-    payday = ws + timedelta(days=12)
+    payday = ws + timedelta(days=13)
+    kgen_payday = ws + timedelta(days=12)
     entries = await db.entries.find({"worker_id": user["id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
+    payments = await db.payments.find({"worker_id": user["id"]}, {"_id": 0}).to_list(1000)
+    paid_weeks = {p["week_start"] for p in payments}
+    week_starts = {week_start_of(date.fromisoformat(e["date"])) for e in entries} | {ws, ws + timedelta(days=7)}
+    weeks = []
+    for w0 in sorted(week_starts):
+        w1 = w0 + timedelta(days=6)
+        m = sum(e["minutes"] for e in entries if w0.isoformat() <= e["date"] <= w1.isoformat())
+        weeks.append({
+            "start": w0.isoformat(),
+            "end": w1.isoformat(),
+            "kgen_payday": (w0 + timedelta(days=12)).isoformat(),
+            "bonus_payday": (w0 + timedelta(days=13)).isoformat(),
+            "minutes": m,
+            "qualifies": m > GOAL_MINUTES,
+            "paid": w0.isoformat() in paid_weeks,
+            "closed": w1 < today,
+            "status": "current" if w0 == ws else ("future" if w0 > ws else "past"),
+        })
+    day_minutes = {e["date"]: e["minutes"] for e in entries}
     week_minutes = sum(e["minutes"] for e in entries if ws.isoformat() <= e["date"] <= we.isoformat())
     today_entry = next((e for e in entries if e["date"] == today.isoformat()), None)
     rows, _ = await build_week_table(ws)
@@ -594,6 +614,8 @@ async def me_dashboard(user=Depends(get_current_user)):
     return {
         "name": user["name"],
         "days": days,
+        "weeks": weeks,
+        "day_minutes": day_minutes,
         "today": {
             "registered": today_entry is not None,
             "minutes": today_entry["minutes"] if today_entry else 0,
@@ -603,6 +625,7 @@ async def me_dashboard(user=Depends(get_current_user)):
             "start": ws.isoformat(),
             "end": we.isoformat(),
             "payday": payday.isoformat(),
+            "kgen_payday": kgen_payday.isoformat(),
             "minutes": week_minutes,
             "hours": round(week_minutes / 60, 2),
             "goal_minutes": GOAL_MINUTES,

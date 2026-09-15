@@ -4,6 +4,7 @@ import { Delete, Video } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/App";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 
@@ -46,7 +47,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B132B] flex flex-col items-center justify-center px-6 py-10">
+    <div className="min-h-screen bg-[#0B132B] flex flex-col items-center justify-center px-6 py-10 relative">
+      <div className="absolute top-4 right-4"><ThemeToggle /></div>
       <div className="fade-up flex flex-col items-center mb-8">
         <div className="w-16 h-16 rounded-2xl bg-sky-500 flex items-center justify-center shadow-lg shadow-sky-500/30 mb-4">
           <Video className="w-8 h-8 text-white" />

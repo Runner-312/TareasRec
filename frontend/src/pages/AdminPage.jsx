@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, LineChart as LineChartIcon, Trophy, Users, ClipboardList, LogOut, Video } from "lucide-react";
 import { useAuth } from "@/App";
+import ThemeToggle from "@/components/ThemeToggle";
 import OverviewTab from "@/components/admin/OverviewTab";
 import StatsTab from "@/components/admin/StatsTab";
 import RankingsTab from "@/components/admin/RankingsTab";
@@ -33,13 +34,16 @@ export default function AdminPage() {
             <p className="text-slate-400 text-[11px] font-medium">Panel de Administrador</p>
           </div>
         </div>
-        <button
-          data-testid="admin-logout-button"
-          onClick={() => { logout(); navigate("/login"); }}
-          className="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold bg-slate-800 rounded-xl px-3 py-2 transition-colors"
-        >
-          <LogOut className="w-4 h-4" /> Salir
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            data-testid="admin-logout-button"
+            onClick={() => { logout(); navigate("/login"); }}
+            className="flex items-center gap-1.5 text-slate-300 hover:text-white text-xs font-semibold bg-slate-800 rounded-xl px-3 py-2 transition-colors"
+          >
+            <LogOut className="w-4 h-4" /> Salir
+          </button>
+        </div>
       </header>
 
       <nav className="sticky top-[60px] z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 px-2 py-2 flex gap-1 overflow-x-auto" data-testid="admin-tabs">

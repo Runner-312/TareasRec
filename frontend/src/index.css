@@ -27,7 +27,46 @@
         --ring: 199 89% 48%;
         --radius: 0.75rem;
     }
+    .dark {
+        --background: 222 47% 8%;
+        --foreground: 210 40% 96%;
+        --card: 222 40% 12%;
+        --card-foreground: 210 40% 96%;
+        --popover: 222 40% 12%;
+        --popover-foreground: 210 40% 96%;
+        --secondary: 222 40% 16%;
+        --secondary-foreground: 210 40% 96%;
+        --muted: 222 40% 16%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 222 40% 16%;
+        --accent-foreground: 210 40% 96%;
+        --border: 222 30% 20%;
+        --input: 222 30% 20%;
+    }
 }
+
+/* Modo oscuro: remapeo de utilidades usadas en toda la app */
+.dark .bg-\[\#F8FAFC\] { background-color: #0B1120; }
+.dark .bg-white, .dark .bg-white\/90 { background-color: #131C31; }
+.dark .bg-slate-50, .dark .bg-slate-100, .dark .bg-sky-50, .dark .bg-emerald-50, .dark .bg-amber-50 { background-color: #1B2540; }
+.dark .bg-sky-50\/50 { background-color: #1B2540; }
+.dark .bg-\[\#0B132B\] { background-color: #060B18; }
+.dark .bg-\[\#0B132B\]\/95 { background-color: rgba(6, 11, 24, 0.95); }
+.dark .text-slate-900, .dark .text-slate-800, .dark .text-slate-700 { color: #E2E8F0; }
+.dark .text-slate-600, .dark .text-slate-500 { color: #A6B3C8; }
+.dark .text-slate-400 { color: #8593AB; }
+.dark .text-sky-800, .dark .text-sky-700 { color: #7DD3FC; }
+.dark .text-emerald-800, .dark .text-emerald-600 { color: #6EE7B7; }
+.dark .text-amber-800 { color: #FCD34D; }
+.dark .border-slate-100, .dark .border-slate-200, .dark .border-sky-100, .dark .border-emerald-200 { border-color: #24304D; }
+.dark .hover\:bg-slate-100:hover, .dark .hover\:bg-slate-200:hover, .dark .hover\:bg-sky-50:hover { background-color: #24304D; }
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15); }
+.dark .bg-sky-100 { background-color: rgba(14, 165, 233, 0.25); }
+.dark .bg-slate-200 { background-color: #2A3650; }
+.dark input, .dark textarea { background-color: #0F172A; color: #E2E8F0; }
+.dark input::placeholder { color: #64748B; }
+.dark .shadow-sm { box-shadow: none; }
+.dark .recharts-cartesian-grid line { stroke: #24304D; }
 
 @layer base {
     * {
