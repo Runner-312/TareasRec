@@ -28,8 +28,8 @@ db = client[os.environ['DB_NAME']]
 
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_ALGORITHM = "HS256"
-ADMIN_CODE = "1209"
-ADMIN_EMAIL = "wuilber1209@gmail.com"
+ADMIN_CODE = os.environ.get("ADMIN_CODE", "1209")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "wuilber1209@gmail.com")
 APP_NAME = os.environ.get("APP_NAME", "tareasrec")
 
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
