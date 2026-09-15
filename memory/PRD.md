@@ -46,3 +46,8 @@
 - GET /api/admin/entries?worker_id=&week_start= (filtros); PATCH /api/admin/entries/{id}/review?reviewed=bool. Campo entries.reviewed.
 - EntriesTab: selector de miembro, navegación por semana (toggle todas/semana), contador sin revisar, botón check por registro y en el diálogo de captura.
 - /me/dashboard devuelve day_reviewed[]; PayCalendar muestra check minimalista junto a los minutos. Colores: semana en curso sky-500, pasadas sky-100, próxima sky-50 punteado; sin amarillo/gris en celdas.
+
+## 2026-06 — Calendario degradado, popovers de pago, wallet BEP20
+- Semana en curso: días pasados se aclaran progresivamente (rgba sky con alpha 1-0.11*días, mín 0.42); distinto de semanas pasadas (sky-100).
+- Lunes/martes de pago próximos: icono Banknote; popover verde (KGEN, sin mención de 10h) / amarillo (BONO).
+- Campo usdt_bep20_address en users (regex 0x+40 hex). POST /api/me/wallet (solo una vez por miembro); admin puede ver/editar en ficha. Aviso en panel miembro con input para enviarla (member/MemberNotices.jsx).

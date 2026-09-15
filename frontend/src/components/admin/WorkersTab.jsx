@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Pencil, Trash2, KeyRound, Wallet } from "lucide-react";
+import { UserPlus, Pencil, Trash2, KeyRound, Wallet, Landmark } from "lucide-react";
 import { toast } from "sonner";
 import api, { fmtMinutes } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -56,6 +56,10 @@ export default function WorkersTab() {
                   <Wallet className="w-3 h-3" /> Binance Pay:{" "}
                   {w.binance_pay_id ? <span className="font-mono font-bold text-slate-600">{w.binance_pay_id}</span> : <span className="italic text-amber-500">sin agregar</span>}
                 </p>
+                <p className="text-xs text-slate-400 font-medium flex items-center gap-1 min-w-0" data-testid={`worker-wallet-${w.id}`}>
+                  <Landmark className="w-3 h-3 shrink-0" /> USDT BEP20:{" "}
+                  {w.usdt_bep20_address ? <span className="font-mono font-bold text-slate-600 truncate">{w.usdt_bep20_address}</span> : <span className="italic text-amber-500">sin agregar</span>}
+                </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Semana: <span className="font-mono font-bold text-sky-600">{fmtMinutes(w.week_minutes)}</span> · Total: <span className="font-mono font-bold text-slate-600">{fmtMinutes(w.total_minutes)}</span>
                   {w.historical_minutes > 0 && <span data-testid={`worker-historical-${w.id}`}> · Histórico: <span className="font-mono font-bold text-slate-500">{fmtMinutes(w.historical_minutes)}</span></span>}
@@ -100,14 +104,15 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
   const [name, setName] = useState(worker?.name || "");
   const [code, setCode] = useState("");
   const [binance, setBinance] = useState(worker?.binance_pay_id || "");
+  const [wallet, setWallet] = useState(worker?.usdt_bep20_address || "");
   const [histMin, setHistMin] = useState(worker?.historical_minutes ? String(worker.historical_minutes) : "");
   const historical_minutes = histMin === "" ? undefined : parseInt(histMin, 10);
 
   const save = useMutation({
     mutationFn: () =>
       worker
-        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance, historical_minutes: histMin === "" ? 0 : historical_minutes })
-        : api.post("/admin/workers", { name, code, binance_pay_id: binance, historical_minutes }),
+        ? api.put(`/admin/workers/${worker.id}`, { name, code: code || undefined, binance_pay_id: binance, usdt_bep20_address: wallet, historical_minutes: histMin === "" ? 0 : historical_minutes })
+        : api.post("/admin/workers", { name, code, binance_pay_id: binance, usdt_bep20_address: wallet, historical_minutes }),
     onSuccess: () => {
       toast.success(worker ? "Miembro actualizado" : "Miembro creado");
       qc.invalidateQueries({ queryKey: ["workers"] });
@@ -154,6 +159,16 @@ function WorkerForm({ open, onClose, title, worker, testId }) {
               onChange={(e) => setBinance(e.target.value.trim().slice(0, 40))}
               placeholder="Ej. 123456789 · se puede agregar después"
               className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dirección USDT · BEP20 (opcional)</label>
+            <input
+              data-testid={`worker-wallet-input-${testId}`}
+              value={wallet}
+              onChange={(e) => setWallet(e.target.value.trim().slice(0, 42))}
+              placeholder="0x… (42 caracteres) · el miembro puede cargarla"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
           <div>

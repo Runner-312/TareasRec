@@ -61,7 +61,7 @@ export default function EmployeePage() {
         </section>
 
         <SummaryCards week={w} globalMinutes={data.global_minutes} historicalMinutes={data.historical_minutes} />
-        <MemberNotices streak={data.streak} binancePayId={data.binance_pay_id} />
+        <MemberNotices streak={data.streak} binancePayId={data.binance_pay_id} walletAddress={data.usdt_bep20_address} />
 
         <section className="fade-up bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <h2 className="text-lg font-bold text-slate-900 mb-1">Tus minutos de la semana</h2>

@@ -3,6 +3,7 @@ load_dotenv()
 
 import os
 import io
+import re
 import uuid
 import asyncio
 import logging
@@ -173,7 +174,23 @@ class WorkerBody(BaseModel):
     name: str
     code: Optional[str] = None
     binance_pay_id: Optional[str] = None
+    usdt_bep20_address: Optional[str] = None
     historical_minutes: Optional[int] = None
+
+
+class WalletBody(BaseModel):
+    usdt_bep20_address: str
+
+
+def clean_wallet(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    v = value.strip()
+    if v == "":
+        return ""
+    if not re.fullmatch(r"0x[0-9a-fA-F]{40}", v):
+        raise HTTPException(status_code=400, detail="La dirección BEP20 debe empezar por 0x y tener 42 caracteres")
+    return v
 
 
 def clean_binance(value: Optional[str]) -> Optional[str]:
@@ -227,6 +244,8 @@ async def list_workers(admin=Depends(require_admin)):
     for w in workers:
         w["week_minutes"] = week_min.get(w["id"], 0)
         w["historical_minutes"] = int(w.get("historical_minutes") or 0)
+        w["binance_pay_id"] = w.get("binance_pay_id") or ""
+        w["usdt_bep20_address"] = w.get("usdt_bep20_address") or ""
         w["total_minutes"] = total_min.get(w["id"], 0) + w["historical_minutes"]
     return workers
 
@@ -249,6 +268,7 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
         "role": "worker",
         "active": True,
         "binance_pay_id": clean_binance(body.binance_pay_id) or "",
+        "usdt_bep20_address": clean_wallet(body.usdt_bep20_address) or "",
         "historical_minutes": max(0, int(body.historical_minutes or 0)),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -276,6 +296,8 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
         updates["code"] = code
     if body.binance_pay_id is not None:
         updates["binance_pay_id"] = clean_binance(body.binance_pay_id)
+    if body.usdt_bep20_address is not None:
+        updates["usdt_bep20_address"] = clean_wallet(body.usdt_bep20_address)
     if body.historical_minutes is not None:
         if body.historical_minutes < 0:
             raise HTTPException(status_code=400, detail="Los minutos históricos no pueden ser negativos")
@@ -550,6 +572,19 @@ async def delete_entry(entry_id: str, admin=Depends(require_admin)):
     return {"deleted": True}
 
 
+@api_router.post("/me/wallet")
+async def set_my_wallet(body: WalletBody, user=Depends(get_current_user)):
+    if user.get("role") != "worker":
+        raise HTTPException(status_code=403, detail="Solo miembros")
+    if user.get("usdt_bep20_address"):
+        raise HTTPException(status_code=400, detail="Ya registraste tu dirección; pídele a Wuilber si necesitas cambiarla")
+    addr = clean_wallet(body.usdt_bep20_address)
+    if not addr:
+        raise HTTPException(status_code=400, detail="Ingresa tu dirección USDT (BEP20)")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"usdt_bep20_address": addr}})
+    return {"usdt_bep20_address": addr}
+
+
 @api_router.post("/entries")
 async def create_entry(
     minutes: int = Form(...),
@@ -643,6 +678,7 @@ async def me_dashboard(user=Depends(get_current_user)):
     return {
         "name": user["name"],
         "binance_pay_id": user.get("binance_pay_id") or "",
+        "usdt_bep20_address": user.get("usdt_bep20_address") or "",
         "streak": streak,
         "days": days,
         "weeks": weeks,
