@@ -20,11 +20,12 @@ function describeDay(iso, weeks, minutes) {
   if (pay) {
     const isBonus = !!payBonus;
     const range = `${fmtDate(pay.start)} – ${fmtDate(pay.end)}`;
+    const base = cycle ? (cycle.status === "current" ? "cycle" : cycle.status === "future" ? "future" : cycle.paid ? "paid" : "past") : "none";
     if (pay.paid) return { tone: "paid", icon: Check, title: isBonus ? "Bono pagado" : "Pago KGEN realizado", text: `Semana ${range} ya pagada.`, minutes, cycle };
     if (isBonus) {
       const pending = pay.closed && pay.qualifies;
       return {
-        tone: pending ? "pending" : "bonus",
+        tone: pending ? "pending" : base,
         icon: pending ? Clock : null,
         title: pending ? "Bono pendiente de pago" : "Martes: pago del bono",
         text: pay.closed
@@ -36,7 +37,7 @@ function describeDay(iso, weeks, minutes) {
         cycle,
       };
     }
-    return { tone: "kgen", icon: null, title: "Lunes: pago de KGEN", text: `KGEN paga a todo el equipo lo grabado la semana ${range}.`, minutes, cycle };
+    return { tone: base, icon: null, title: "Lunes: pago de KGEN", text: `KGEN paga a todo el equipo lo grabado la semana ${range}.`, minutes, cycle };
   }
   if (cycle) {
     const range = `${fmtDate(cycle.start)} – ${fmtDate(cycle.end)}`;
@@ -50,8 +51,6 @@ function describeDay(iso, weeks, minutes) {
 }
 
 const TONE = {
-  kgen: "bg-emerald-400 text-emerald-950",
-  bonus: "bg-amber-400 text-amber-950",
   pending: "bg-amber-300 text-amber-950",
   paid: "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300",
   cycle: "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-200",
@@ -61,8 +60,11 @@ const TONE = {
 };
 
 const TONE_DOT = {
-  kgen: "bg-emerald-400", bonus: "bg-amber-400", pending: "bg-amber-300", paid: "bg-slate-200", cycle: "bg-sky-100 border border-sky-300", future: "bg-sky-50 border border-dashed border-sky-300",
+  pending: "bg-amber-300", paid: "bg-slate-200", cycle: "bg-sky-100 border border-sky-300", future: "bg-sky-50 border border-dashed border-sky-300",
 };
+
+const COLUMN_TABS = { 0: { label: "KGEN", cls: "border-emerald-400 bg-emerald-400 text-emerald-950", testId: "calendar-kgen-column" }, 1: { label: "BONO", cls: "border-amber-400 bg-amber-400 text-amber-950", testId: "calendar-bono-column" } };
+const colStyle = (i) => ({ left: `calc(${i} * (100% - 6 * 0.25rem) / 7 + ${i} * 0.25rem - 3px)`, width: "calc((100% - 6 * 0.25rem) / 7 + 6px)" });
 
 export default function PayCalendar({ weeks = [], dayMinutes = {}, currentWeekStart }) {
   const today = toISODate(new Date());
@@ -110,7 +112,13 @@ export default function PayCalendar({ weeks = [], dayMinutes = {}, currentWeekSt
         <button data-testid="calendar-next-week" onClick={() => moveWeek(1)} className="text-[11px] font-bold text-sky-600 px-2 py-1 rounded-lg hover:bg-sky-50 active:scale-95 transition">Semana →</button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div className="relative pt-1">
+        {[0, 1].map((i) => (
+          <div key={i} data-testid={COLUMN_TABS[i].testId} className={`absolute top-0 bottom-0 rounded-lg border-2 pointer-events-none ${COLUMN_TABS[i].cls.split(" ")[0]}`} style={colStyle(i)}>
+            <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 text-[8px] font-extrabold tracking-wider px-1.5 py-0.5 rounded-md leading-none ${COLUMN_TABS[i].cls}`}>{COLUMN_TABS[i].label}</span>
+          </div>
+        ))}
+      <div className="grid grid-cols-7 gap-1 text-center pt-1.5 pb-1">
         {DOW.map((d) => (
           <div key={d} className="text-[10px] font-bold text-slate-400 uppercase py-1">{d}</div>
         ))}
@@ -153,12 +161,13 @@ export default function PayCalendar({ weeks = [], dayMinutes = {}, currentWeekSt
           );
         })}
       </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-4 text-[11px] text-slate-500 font-medium" data-testid="calendar-legend">
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-sky-100 border border-sky-300" /> Semana en curso (Mié–Mar)</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-sky-50 border border-dashed border-sky-300" /> Próxima semana</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-400" /> Lunes: pago KGEN</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-400" /> Martes: pago del bono</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-emerald-400" /> Columna KGEN: lunes de pago</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-amber-400" /> Columna BONO: martes de pago</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-300 flex items-center justify-center"><Clock className="w-2 h-2 text-amber-950" /></span> Pendiente de pago</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-slate-200" /> Ya pagado</span>
       </div>

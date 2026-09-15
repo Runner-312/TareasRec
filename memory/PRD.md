@@ -36,3 +36,8 @@
 
 ## 2026-06 — Health check despliegue
 - deployment_agent: PASS. ADMIN_CODE y ADMIN_EMAIL movidos a backend/.env (leídos con os.environ.get + fallback).
+
+## 2026-06 — Racha, aviso Binance, columnas calendario
+- /me/dashboard devuelve streak (días consecutivos con registro, hoy o ayer como ancla) y binance_pay_id.
+- member/MemberNotices.jsx: tarjeta Racha diaria + aviso ámbar si falta Binance Pay ID.
+- PayCalendar: lunes/martes ya no se colorean por celda; columnas L y M enmarcadas con borde verde (pestaña KGEN) y amarillo (pestaña BONO). Se mantienen pendiente (amarillo+reloj) y pagado (gris+check).

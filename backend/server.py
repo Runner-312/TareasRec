@@ -607,12 +607,20 @@ async def me_dashboard(user=Depends(get_current_user)):
     global_ranking = await build_global_ranking()
     my_global = next((g for g in global_ranking if g["id"] == user["id"]), None)
     remaining = max(0, GOAL_MINUTES - week_minutes)
+    entry_dates = {e["date"] for e in entries}
+    streak = 0
+    cursor = today if today.isoformat() in entry_dates else today - timedelta(days=1)
+    while cursor.isoformat() in entry_dates:
+        streak += 1
+        cursor -= timedelta(days=1)
     days = []
     for i in range(7):
         d = (ws + timedelta(days=i)).isoformat()
         days.append({"date": d, "label": DAY_LABELS[i], "total": sum(e["minutes"] for e in entries if e["date"] == d)})
     return {
         "name": user["name"],
+        "binance_pay_id": user.get("binance_pay_id") or "",
+        "streak": streak,
         "days": days,
         "weeks": weeks,
         "day_minutes": day_minutes,
