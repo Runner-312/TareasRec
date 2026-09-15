@@ -41,3 +41,8 @@
 - /me/dashboard devuelve streak (días consecutivos con registro, hoy o ayer como ancla) y binance_pay_id.
 - member/MemberNotices.jsx: tarjeta Racha diaria + aviso ámbar si falta Binance Pay ID.
 - PayCalendar: lunes/martes ya no se colorean por celda; columnas L y M enmarcadas con borde verde (pestaña KGEN) y amarillo (pestaña BONO). Se mantienen pendiente (amarillo+reloj) y pagado (gris+check).
+
+## 2026-06 — Filtros, revisado, colores calendario
+- GET /api/admin/entries?worker_id=&week_start= (filtros); PATCH /api/admin/entries/{id}/review?reviewed=bool. Campo entries.reviewed.
+- EntriesTab: selector de miembro, navegación por semana (toggle todas/semana), contador sin revisar, botón check por registro y en el diálogo de captura.
+- /me/dashboard devuelve day_reviewed[]; PayCalendar muestra check minimalista junto a los minutos. Colores: semana en curso sky-500, pasadas sky-100, próxima sky-50 punteado; sin amarillo/gris en celdas.

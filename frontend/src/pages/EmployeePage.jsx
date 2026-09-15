@@ -79,7 +79,7 @@ export default function EmployeePage() {
           <p className="text-sm text-slate-500 mb-3">
             Lo que grabes del <strong>miércoles {fmtDate(w.start)}</strong> al <strong>martes {fmtDate(w.end)}</strong>: KGEN paga el <strong className="text-emerald-600">lunes {fmtDate(w.kgen_payday)}</strong> y el bono (si superas 10 h) se paga el <strong className="text-amber-600">martes {fmtDate(w.payday)}</strong>. Toca cualquier día para ver qué significa.
           </p>
-          <PayCalendar weeks={data.weeks} dayMinutes={data.day_minutes} currentWeekStart={w.start} />
+          <PayCalendar weeks={data.weeks} dayMinutes={data.day_minutes} dayReviewed={data.day_reviewed} currentWeekStart={w.start} />
         </section>
 
         <EntriesList entries={data.entries} />

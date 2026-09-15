@@ -512,12 +512,34 @@ async def unmark_paid(worker_id: str = Query(...), week_start: str = Query(...),
 
 
 @api_router.get("/admin/entries")
-async def admin_entries(admin=Depends(require_admin)):
-    entries = await db.entries.find({}, {"_id": 0}).sort("date", -1).to_list(300)
+async def admin_entries(
+    worker_id: Optional[str] = None,
+    week_start: Optional[str] = None,
+    admin=Depends(require_admin),
+):
+    query = {}
+    if worker_id:
+        query["worker_id"] = worker_id
+    if week_start:
+        try:
+            ws = week_start_of(date.fromisoformat(week_start))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Fecha inválida")
+        query["date"] = {"$gte": ws.isoformat(), "$lte": (ws + timedelta(days=6)).isoformat()}
+    entries = await db.entries.find(query, {"_id": 0}).sort("date", -1).to_list(500)
     workers = {w["id"]: w["name"] for w in await db.users.find({"role": "worker"}, {"_id": 0}).to_list(1000)}
     for e in entries:
         e["worker_name"] = workers.get(e["worker_id"], "Eliminado")
+        e["reviewed"] = bool(e.get("reviewed"))
     return entries
+
+
+@api_router.patch("/admin/entries/{entry_id}/review")
+async def review_entry(entry_id: str, reviewed: bool = Query(True), admin=Depends(require_admin)):
+    result = await db.entries.update_one({"id": entry_id}, {"$set": {"reviewed": reviewed}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    return {"id": entry_id, "reviewed": reviewed}
 
 
 @api_router.delete("/admin/entries/{entry_id}")
@@ -596,6 +618,7 @@ async def me_dashboard(user=Depends(get_current_user)):
             "status": "current" if w0 == ws else ("future" if w0 > ws else "past"),
         })
     day_minutes = {e["date"]: e["minutes"] for e in entries}
+    day_reviewed = [e["date"] for e in entries if e.get("reviewed")]
     week_minutes = sum(e["minutes"] for e in entries if ws.isoformat() <= e["date"] <= we.isoformat())
     today_entry = next((e for e in entries if e["date"] == today.isoformat()), None)
     rows, _ = await build_week_table(ws)
@@ -624,6 +647,7 @@ async def me_dashboard(user=Depends(get_current_user)):
         "days": days,
         "weeks": weeks,
         "day_minutes": day_minutes,
+        "day_reviewed": day_reviewed,
         "today": {
             "registered": today_entry is not None,
             "minutes": today_entry["minutes"] if today_entry else 0,
