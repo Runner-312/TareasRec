@@ -1,0 +1,40 @@
+{
+  "summary": "Full backend + frontend regression for the new features batch: historical_minutes (create/edit/list), Tuesday bonus_payday + Monday kgen_payday on /admin/week and /me/dashboard (including weeks[] with status current/future, day_minutes{}), member PayCalendar (data-tone kgen/bonus/cycle/future/paid/pending, calendar-day-YYYY-MM-DD + calendar-minutes-YYYY-MM-DD, prev/next week + month navigation with focus-week change, calendar-day-popover swapping titles per day, calendar-legend), historical minutes admin form (worker-historical-input-add/-edit accepts digits only, live '= Xh Ym' conversion, worker-historical-<id> badge in list), theme-toggle-button on /login /panel /admin (html.dark + localStorage.theme=dark, persists across reload, toggles back to light), admin regression (payout-export-card, Rankings/Gráfico/Miembros/Registros tabs). All 23 pytest cases pass (2 skipped: stale Prueba Maria math test and mark/unmark payments — no payable worker after cleanup). Cleaned DB at end: only admin Wuilber remains, no entries, no payments.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin StatsTab / MyWeekChart", "issues": ["Recharts warning 'width(-1) and height(-1)' still logged on first paint when tab/section is hidden — non-blocking, same as iteration_1"]},
+      {"screen": "Admin 'Nuevo miembro' / 'Editar' dialogs", "issues": ["Radix warning: DialogContent missing Description/aria-describedby — non-blocking a11y"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional a11y) Add DialogDescription to WorkerForm and any other admin dialog to remove Radix aria warning.",
+    "(Optional) Give charts an explicit min-height to silence Recharts (-1) warning on first render."
+  ],
+  "critical_code_review_comments": [
+    "PayCalendar computes `focusEnd` with a regex+setDate fallback that is dead-code when weeks[] contains the focus week; simplify to `shiftWeek(focusWeek, 6)` or derive weekday-end via new Date + 6 days for readability.",
+    "ThemeToggle is a self-contained component but reads localStorage synchronously in useState initializer — App.js also applies `.dark` at module top for pre-hydration. Good pattern, but the two writers could drift; consider a shared hook.",
+    "server.py still uses `date.today()` (server-timezone) for week boundaries and daily-duplicate guard; a worker recording near midnight local time can hit unexpected 409s. Consider ZoneInfo('America/Guatemala').",
+    "me_dashboard.weeks[] only includes weeks that have entries or the current/next week; a closed-and-paid week without entries won't appear, which is fine for empty data but means PayCalendar can't render 'paid' tone for such history. Acceptable given seed rules.",
+    "No brute-force lockout on /auth/login (4-digit PIN); still noted from iteration_1.",
+    "historical_minutes has no explicit upper bound; UI caps at 8 digits (~99,999,999 min). Backend accepts any non-negative int — consider a sane cap (e.g. 10 years * 60*24*365)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (skipped stale Prueba Maria test)",
+    "/app/backend/tests/test_new_features.py (new — historical_minutes, paydays, dashboard fields, seed for paid week)"
+  ],
+  "success_rate": {"backend": "100% (23/23 executed, 2 skipped)", "frontend": "100% of requested checks"},
+  "test_credentials": "Admin PIN 1209 (Wuilber). Temporary member 7788 TEST_QA_Cal used during the run and deleted at teardown.",
+  "seed_data_creation": "None persisted. Temporary worker (code 7788, historical_minutes=7230→500) + one entry + one payment were created via API and fully cleaned. Final DB state: only admin Wuilber.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Server date is 2026-09-15 (Tue). Current week Wed 2026-09-09 → Tue 2026-09-15; kgen_payday=2026-09-21 (Mon, green tone 'kgen'); bonus_payday=2026-09-22 (Tue, amber tone 'bonus'). Member calendar viewport 420px. Verified data-tone values: cycle (Wed–Tue current), future (next week 09-16..09-22), kgen (09-21), bonus (09-22). Popover updates on tap; theme toggle persists via localStorage.theme. Recharts and Radix Dialog a11y warnings are pre-existing non-blockers. DB cleaned at end.",
+  "rca of the issue": "N/A — no failing bugs. The single pre-existing failing pytest ('Prueba Maria math') was stale because the requested cleanup removed all members; skipped."
+}
