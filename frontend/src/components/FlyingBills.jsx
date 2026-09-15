@@ -14,7 +14,7 @@ export default function FlyingBills() {
       {BILLS.map((b, i) => (
         <Banknote
           key={i}
-          className="bill absolute text-emerald-500/20 dark:text-emerald-400/15"
+          className="bill absolute"
           style={{ left: `${b.left}%`, width: b.size, height: b.size, animationDelay: `-${b.delay}s`, animationDuration: `${b.duration}s`, "--drift": b.drift }}
         />
       ))}

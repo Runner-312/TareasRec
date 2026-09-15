@@ -63,3 +63,6 @@
 - Header miembro (sticky): nombre en fuego si on_fire (último registro >300 min, campo on_fire en /me/dashboard) + insignias.
 - RankingList: 4 filas visibles; top 3 nombres en fuego.
 - FlyingBills.jsx: fondo fijo con Banknote animados (login, admin, miembro).
+
+## 2026-06 — Glassmorphism
+- index.css: .bg-white / .bg-[#0B132B] / bg-*-50 → fondos translúcidos con backdrop-filter blur(14px) (excluye inputs/select y header). Billetes de fondo más visibles (.bill color).
