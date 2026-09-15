@@ -188,8 +188,8 @@ def clean_wallet(value: Optional[str]) -> Optional[str]:
     v = value.strip()
     if v == "":
         return ""
-    if not re.fullmatch(r"0x[0-9a-fA-F]{40}", v):
-        raise HTTPException(status_code=400, detail="La dirección BEP20 debe empezar por 0x y tener 42 caracteres")
+    if not re.fullmatch(r"[0-9A-Za-z]{20,64}", v):
+        raise HTTPException(status_code=400, detail="La dirección USDT (BEP20) no parece válida (20-64 letras y números)")
     return v
 
 
@@ -671,6 +671,16 @@ async def me_dashboard(user=Depends(get_current_user)):
     while cursor.isoformat() in entry_dates:
         streak += 1
         cursor -= timedelta(days=1)
+    best_streak = 0
+    run = 0
+    prev = None
+    for d in sorted(date.fromisoformat(x) for x in entry_dates):
+        run = run + 1 if prev is not None and (d - prev).days == 1 else 1
+        best_streak = max(best_streak, run)
+        prev = d
+    best_streak = max(best_streak, int(user.get("best_streak") or 0), streak)
+    if best_streak != int(user.get("best_streak") or 0):
+        await db.users.update_one({"id": user["id"]}, {"$set": {"best_streak": best_streak}})
     days = []
     for i in range(7):
         d = (ws + timedelta(days=i)).isoformat()
@@ -680,6 +690,7 @@ async def me_dashboard(user=Depends(get_current_user)):
         "binance_pay_id": user.get("binance_pay_id") or "",
         "usdt_bep20_address": user.get("usdt_bep20_address") or "",
         "streak": streak,
+        "best_streak": best_streak,
         "days": days,
         "weeks": weeks,
         "day_minutes": day_minutes,

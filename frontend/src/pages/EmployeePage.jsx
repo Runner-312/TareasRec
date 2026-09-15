@@ -61,16 +61,7 @@ export default function EmployeePage() {
         </section>
 
         <SummaryCards week={w} globalMinutes={data.global_minutes} historicalMinutes={data.historical_minutes} />
-        <MemberNotices streak={data.streak} binancePayId={data.binance_pay_id} walletAddress={data.usdt_bep20_address} />
-
-        <section className="fade-up bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Tus minutos de la semana</h2>
-          <p className="text-xs text-slate-400 mb-3">Miércoles a martes · minutos registrados por día</p>
-          <MyWeekChart days={data.days} />
-        </section>
-
-        <GoalCard week={w} name={data.name} />
-        <RankSection data={data} userId={user?.id} />
+        <MemberNotices streak={data.streak} bestStreak={data.best_streak} binancePayId={data.binance_pay_id} walletAddress={data.usdt_bep20_address} />
 
         <section className="fade-up">
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1 flex items-center gap-2">
@@ -81,6 +72,15 @@ export default function EmployeePage() {
           </p>
           <PayCalendar weeks={data.weeks} dayMinutes={data.day_minutes} dayReviewed={data.day_reviewed} currentWeekStart={w.start} />
         </section>
+
+        <section className="fade-up bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h2 className="text-lg font-bold text-slate-900 mb-1">Tus minutos de la semana</h2>
+          <p className="text-xs text-slate-400 mb-3">Miércoles a martes · minutos registrados por día</p>
+          <MyWeekChart days={data.days} />
+        </section>
+
+        <GoalCard week={w} name={data.name} />
+        <RankSection data={data} userId={user?.id} />
 
         <EntriesList entries={data.entries} />
       </main>

@@ -28,7 +28,7 @@ function describeDay(iso, weeks, minutes, reviewed, today) {
   }
   if (!cycle) return { ...base, title: "Día sin actividad", text: "Este día no forma parte de ninguna semana registrada." };
   const range = `${fmtDate(cycle.start)} – ${fmtDate(cycle.end)}`;
-  if (tone === "cycle") return { ...base, title: "Semana en curso", text: `Cuenta para la semana ${range}. KGEN paga el lunes ${fmtDate(cycle.kgen_payday)} y el bono el martes ${fmtDate(cycle.bonus_payday)}.` };
+  if (tone === "cycle") return { ...base, title: "Semana en curso", text: `Cuenta para la semana ${range}.` };
   if (tone === "future") return { ...base, title: "Próxima semana", text: `Semana ${range}. KGEN pagará el lunes ${fmtDate(cycle.kgen_payday)} y el bono el martes ${fmtDate(cycle.bonus_payday)}.` };
   return { ...base, title: "Semana pasada", text: `Semana ${range}${cycle.paid ? " · bono pagado" : cycle.qualifies ? ` · bono se paga el martes ${fmtDate(cycle.bonus_payday)}` : " · no se alcanzaron las 10 h"}.` };
 }
@@ -67,11 +67,13 @@ export default function PayCalendar({ weeks = [], dayMinutes = {}, dayReviewed =
   const [focusWeek, setFocusWeek] = useState(currentWeekStart);
   const [month, setMonth] = useState(() => monthOf(currentWeekStart));
   const [open, setOpen] = useState(null);
+  const [anim, setAnim] = useState(0);
 
   const moveWeek = (n) => {
     const next = shiftWeek(focusWeek, n);
     setFocusWeek(next);
     setMonth(monthOf(next));
+    setAnim((a) => a + 1);
   };
   const focusEnd = weeks.find((w) => w.start === focusWeek)?.end || shiftWeek(focusWeek, 0).replace(/(\d{4}-\d{2}-)(\d{2})$/, (_, p, d) => {
     const dt = new Date(`${focusWeek}T12:00:00`);
@@ -129,13 +131,15 @@ export default function PayCalendar({ weeks = [], dayMinutes = {}, dayReviewed =
             <Popover key={iso} open={open === iso} onOpenChange={(o) => setOpen(o ? iso : null)}>
               <PopoverTrigger asChild>
                 <button
+                  key={inFocus ? `${iso}-${anim}` : iso}
                   data-testid={`calendar-day-${iso}`}
                   data-tone={info.tone}
                   data-pop={info.pop || undefined}
-                  style={cyc?.style}
+                  data-focus={inFocus ? "true" : undefined}
+                  style={{ ...(cyc?.style || {}), ...(inFocus && anim > 0 ? { animationDelay: `${daysBetween(focus.start, iso) * 60}ms` } : {}) }}
                   className={`aspect-square w-full flex flex-col items-center justify-center rounded-lg text-xs font-semibold relative leading-none transition-transform active:scale-95 ${cyc ? cyc.className : TONE[info.tone]} ${
                     isToday ? "ring-2 ring-sky-500 ring-offset-1 dark:ring-offset-slate-900" : ""
-                  } ${inFocus && !isToday ? "outline outline-1 outline-sky-400/60" : ""}`}
+                  } ${inFocus && !isToday ? "outline outline-1 outline-sky-400/60" : ""} ${inFocus && anim > 0 ? "week-wave" : ""}`}
                 >
                   <span>{Number(iso.slice(-2))}</span>
                   {info.upcoming && (

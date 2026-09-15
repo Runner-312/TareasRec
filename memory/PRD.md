@@ -51,3 +51,9 @@
 - Semana en curso: días pasados se aclaran progresivamente (rgba sky con alpha 1-0.11*días, mín 0.42); distinto de semanas pasadas (sky-100).
 - Lunes/martes de pago próximos: icono Banknote; popover verde (KGEN, sin mención de 10h) / amarillo (BONO).
 - Campo usdt_bep20_address en users (regex 0x+40 hex). POST /api/me/wallet (solo una vez por miembro); admin puede ver/editar en ficha. Aviso en panel miembro con input para enviarla (member/MemberNotices.jsx).
+
+## 2026-06 — Récord racha, ranking scroll, wallet libre, orden panel
+- best_streak calculado de entradas y persistido en users.best_streak; mostrado junto a racha actual (best-streak-card).
+- RankingList: máx 5 filas visibles (56px c/u), scroll interno, auto-scroll a la fila del miembro.
+- Wallet BEP20: validación relajada a [0-9A-Za-z]{20,64} (sin exigir 0x).
+- Calendario movido arriba del gráfico; popover de semana en curso sin texto de pagos; animación week-wave (escalonada por día) al cambiar semana.

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Flame, Wallet, Landmark, Send } from "lucide-react";
+import { Flame, Wallet, Landmark, Send, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 
 function WalletNotice() {
   const qc = useQueryClient();
   const [addr, setAddr] = useState("");
-  const valid = /^0x[0-9a-fA-F]{40}$/.test(addr);
+  const valid = /^[0-9A-Za-z]{20,64}$/.test(addr);
   const save = useMutation({
     mutationFn: () => api.post("/me/wallet", { usdt_bep20_address: addr }),
     onSuccess: () => {
@@ -33,7 +33,7 @@ function WalletNotice() {
           data-testid="wallet-address-input"
           value={addr}
           onChange={(e) => setAddr(e.target.value.trim())}
-          placeholder="0x…"
+          placeholder="Tu dirección USDT (BEP20)"
           className="flex-1 min-w-0 rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-400"
         />
         <button
@@ -45,12 +45,13 @@ function WalletNotice() {
           <Send className="w-3.5 h-3.5" /> Enviar
         </button>
       </div>
-      {addr && !valid && <p className="text-[11px] text-red-500" data-testid="wallet-address-error">Debe empezar por 0x y tener 42 caracteres.</p>}
+      {addr && !valid && <p className="text-[11px] text-red-500" data-testid="wallet-address-error">Revisa la dirección: solo letras y números (20 a 64 caracteres).</p>}
     </div>
   );
 }
 
-export default function MemberNotices({ streak, binancePayId, walletAddress }) {
+export default function MemberNotices({ streak, bestStreak = 0, binancePayId, walletAddress }) {
+  const isRecord = streak > 0 && streak >= bestStreak;
   return (
     <div className="space-y-3 fade-up">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3" data-testid="streak-card">
@@ -63,8 +64,13 @@ export default function MemberNotices({ streak, binancePayId, walletAddress }) {
             {streak > 0 ? `${streak} ${streak === 1 ? "día seguido" : "días seguidos"} registrando` : "Sin racha activa"}
           </p>
           <p className="text-[11px] text-slate-400">
-            {streak >= 7 ? "¡Imparable! Una semana completa sin fallar." : streak > 0 ? "Registra hoy para mantenerla viva." : "Registra tus minutos hoy y empieza una racha."}
+            {isRecord && streak > 1 ? "¡Estás en tu mejor racha! No la rompas." : streak > 0 ? `Registra hoy para mantenerla viva${bestStreak > streak ? ` · te faltan ${bestStreak - streak + 1} para superar tu récord` : ""}.` : "Registra tus minutos hoy y empieza una racha."}
           </p>
+        </div>
+        <div className="text-center shrink-0 bg-slate-50 rounded-xl px-3 py-2" data-testid="best-streak-card">
+          <Trophy className={`w-4 h-4 mx-auto ${bestStreak > 0 ? "text-amber-500" : "text-slate-300"}`} />
+          <p className="font-mono font-bold text-base text-slate-800 leading-tight" data-testid="best-streak-value">{bestStreak}</p>
+          <p className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Récord</p>
         </div>
       </div>
 
