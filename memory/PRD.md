@@ -33,3 +33,6 @@
 - PayCalendar: colores por semana (en curso celeste, próxima celeste punteado, lunes verde, martes amarillo, pendiente amarillo+reloj, pagado gris+check), popover al tocar día, minutos bajo la fecha, navegación por semana y por mes.
 - Histórico ahora se ingresa en MINUTOS (historical_minutes) y se muestra en horas.
 - Modo oscuro: ThemeToggle en login/admin/miembro, clase .dark + overrides CSS en index.css, persistido en localStorage.
+
+## 2026-06 — Health check despliegue
+- deployment_agent: PASS. ADMIN_CODE y ADMIN_EMAIL movidos a backend/.env (leídos con os.environ.get + fallback).
