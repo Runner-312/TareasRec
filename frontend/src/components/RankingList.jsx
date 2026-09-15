@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { fmtMinutes } from "@/lib/api";
+import { fireClass } from "@/components/Badges";
 
 const badgeStyle = (rank) => {
   if (rank === 1) return "bg-gradient-to-br from-amber-300 to-amber-500 text-amber-950";
@@ -9,7 +10,7 @@ const badgeStyle = (rank) => {
 };
 
 const ROW_H = 56;
-const MAX_VISIBLE = 5;
+const MAX_VISIBLE = 4;
 
 export default function RankingList({ items, testId, highlightId, emptyText = "Aún no hay minutos registrados" }) {
   const visible = (items || []).filter((i) => i.minutes > 0);
@@ -46,7 +47,7 @@ export default function RankingList({ items, testId, highlightId, emptyText = "A
             >
               <span className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center font-mono font-bold text-sm ${badgeStyle(item.rank)}`}>#{item.rank}</span>
               <span className="flex-1 font-semibold text-sm text-slate-800 truncate">
-                {item.name}
+                <span className={fireClass(item.rank)} data-testid={`${testId}-name-${item.rank}`}>{item.name}</span>
                 {me && <span className="ml-2 text-xs text-sky-600 font-bold">(Tú)</span>}
               </span>
               <span className="font-mono text-sm font-bold text-sky-600">{fmtMinutes(item.minutes)}</span>

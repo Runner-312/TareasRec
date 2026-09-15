@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, LineChart as LineChartIcon, Trophy, Users, ClipboardList, LogOut, Video } from "lucide-react";
 import { useAuth } from "@/App";
 import ThemeToggle from "@/components/ThemeToggle";
+import FlyingBills from "@/components/FlyingBills";
 import OverviewTab from "@/components/admin/OverviewTab";
 import StatsTab from "@/components/admin/StatsTab";
 import RankingsTab from "@/components/admin/RankingsTab";
@@ -23,7 +24,8 @@ export default function AdminPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] pb-10 relative">
+      <FlyingBills />
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B132B]/95 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center">
@@ -61,7 +63,7 @@ export default function AdminPage() {
         ))}
       </nav>
 
-      <main className="max-w-md md:max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-md md:max-w-4xl mx-auto px-4 sm:px-6 py-6 relative z-10">
         {tab === "resumen" && <OverviewTab />}
         {tab === "grafico" && <StatsTab />}
         {tab === "rankings" && <RankingsTab />}

@@ -12,6 +12,8 @@ import GoalCard from "@/components/member/GoalCard";
 import RankSection from "@/components/member/RankSection";
 import EntriesList from "@/components/member/EntriesList";
 import MemberNotices from "@/components/member/MemberNotices";
+import FlyingBills from "@/components/FlyingBills";
+import { RankBadge, StreakBadge } from "@/components/Badges";
 
 export default function EmployeePage() {
   const { user, logout } = useAuth();
@@ -33,13 +35,23 @@ export default function EmployeePage() {
   const w = data.week;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-12">
+    <div className="min-h-screen bg-[#F8FAFC] pb-12 relative">
+      <FlyingBills />
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B132B]/95 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center">
             <Video className="w-5 h-5 text-white" />
           </div>
-          <p className="text-white font-bold text-sm" data-testid="employee-welcome">¡Hola, {data.name}!</p>
+          <div className="min-w-0">
+            <p className="text-white font-bold text-sm flex items-center gap-1.5 flex-wrap" data-testid="employee-welcome">
+              ¡Hola, <span data-testid="employee-name" className={data.on_fire ? "fire fire-orange" : ""}>{data.name}</span>!
+            </p>
+            <div className="flex items-center gap-1 mt-0.5" data-testid="header-badges">
+              <RankBadge type="weekly" rank={w.rank} />
+              <RankBadge type="global" rank={data.global_rank} />
+              <StreakBadge streak={data.streak} />
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -53,7 +65,7 @@ export default function EmployeePage() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6 space-y-8">
+      <main className="max-w-md mx-auto px-4 py-6 space-y-8 relative z-10">
         <section className="fade-up">
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Registrar minutos de hoy</h2>
           <p className="text-sm text-slate-500 mt-1">Anota tus minutos y sube la captura como prueba. Una vez guardado, no se puede modificar.</p>

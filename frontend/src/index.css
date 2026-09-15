@@ -115,6 +115,64 @@
     animation: week-wave 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Billetes volando (fondo) */
+@keyframes bill-fly {
+    0% { transform: translateY(110vh) rotate(0deg) translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    50% { transform: translateY(50vh) rotate(calc(var(--drift) * 180deg)) translateX(calc(var(--drift) * 40px)); }
+    90% { opacity: 1; }
+    100% { transform: translateY(-15vh) rotate(calc(var(--drift) * 360deg)) translateX(0); opacity: 0; }
+}
+.bill {
+    top: 0;
+    animation: bill-fly linear infinite;
+    will-change: transform;
+}
+
+/* Fuego en nombres */
+@keyframes fire-flicker {
+    0%, 100% { text-shadow: 0 0 4px var(--f1), 0 -4px 10px var(--f2), 2px -8px 16px var(--f3), -2px -12px 22px transparent; filter: brightness(1); }
+    25% { text-shadow: 0 0 6px var(--f1), -2px -6px 12px var(--f2), 3px -10px 18px var(--f3), 1px -16px 26px var(--f3); filter: brightness(1.15); }
+    50% { text-shadow: 0 0 3px var(--f1), 2px -5px 9px var(--f2), -3px -9px 15px var(--f3), -1px -14px 24px transparent; filter: brightness(1.05); }
+    75% { text-shadow: 0 0 7px var(--f1), 1px -7px 13px var(--f2), -2px -11px 19px var(--f3), 2px -18px 28px var(--f3); filter: brightness(1.2); }
+}
+@keyframes fire-hue {
+    0%, 100% { background-position: 0% 100%; }
+    50% { background-position: 100% 0%; }
+}
+.fire {
+    position: relative;
+    display: inline-block;
+    font-weight: 800;
+    background: linear-gradient(0deg, var(--f1) 0%, var(--f2) 45%, var(--f3) 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: fire-flicker 0.7s ease-in-out infinite, fire-hue 1.6s ease-in-out infinite;
+}
+.fire::after {
+    content: "";
+    position: absolute;
+    left: -6px; right: -6px; top: -14px; bottom: -2px;
+    background: radial-gradient(ellipse at 50% 100%, var(--f2) 0%, transparent 65%);
+    opacity: 0.35;
+    filter: blur(6px);
+    z-index: -1;
+    animation: fire-flicker 0.9s ease-in-out infinite reverse;
+}
+.fire-orange { --f1: #fde047; --f2: #f97316; --f3: #ef4444; }
+.fire-blue { --f1: #a5f3fc; --f2: #38bdf8; --f3: #6366f1; }
+.fire-green { --f1: #d9f99d; --f2: #4ade80; --f3: #059669; }
+
+@keyframes badge-shine {
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.0); }
+    50% { box-shadow: 0 0 10px 1px rgba(255,255,255,0.55); }
+    100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.0); }
+}
+.badge-shine { animation: badge-shine 2.2s ease-in-out infinite; }
+
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;

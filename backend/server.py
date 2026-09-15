@@ -690,6 +690,7 @@ async def me_dashboard(user=Depends(get_current_user)):
         "binance_pay_id": user.get("binance_pay_id") or "",
         "usdt_bep20_address": user.get("usdt_bep20_address") or "",
         "streak": streak,
+        "on_fire": bool(entries) and entries[0]["minutes"] > 300,
         "best_streak": best_streak,
         "days": days,
         "weeks": weeks,

@@ -57,3 +57,9 @@
 - RankingList: máx 5 filas visibles (56px c/u), scroll interno, auto-scroll a la fila del miembro.
 - Wallet BEP20: validación relajada a [0-9A-Za-z]{20,64} (sin exigir 0x).
 - Calendario movido arriba del gráfico; popover de semana en curso sin texto de pagos; animación week-wave (escalonada por día) al cambiar semana.
+
+## 2026-06 — Insignias, fuego, billetes
+- Badges.jsx: RankBadge (weekly=Trophy, global=Globe; oro/plata/bronce, gris 4+), StreakBadge (7/14/30), fireClass (1 naranja, 2 azul, 3 verde). CSS .fire animado en index.css.
+- Header miembro (sticky): nombre en fuego si on_fire (último registro >300 min, campo on_fire en /me/dashboard) + insignias.
+- RankingList: 4 filas visibles; top 3 nombres en fuego.
+- FlyingBills.jsx: fondo fijo con Banknote animados (login, admin, miembro).
