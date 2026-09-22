@@ -235,6 +235,86 @@ class RatesBody(BaseModel):
     bonus_rate: float
 
 
+class ChangeCodeBody(BaseModel):
+    current_code: str
+    new_code: str
+
+
+class ExtraBonusBody(BaseModel):
+    worker_id: str
+    week_start: str
+    received: Optional[bool] = None
+    paid: Optional[bool] = None
+    amount: Optional[float] = None
+
+
+@api_router.post("/admin/change-code")
+async def change_admin_code(body: ChangeCodeBody, admin=Depends(require_admin)):
+    current = body.current_code.strip()
+    new = body.new_code.strip()
+    if current != admin.get("code"):
+        raise HTTPException(status_code=401, detail="El código actual no es correcto")
+    if not (new.isdigit() and len(new) == 4):
+        raise HTTPException(status_code=400, detail="El nuevo código debe tener 4 dígitos")
+    if new == current:
+        raise HTTPException(status_code=400, detail="El nuevo código es igual al actual")
+    if await db.users.find_one({"code": new, "id": {"$ne": admin["id"]}}):
+        raise HTTPException(status_code=409, detail="Ese código ya lo usa un miembro")
+    await db.users.update_one({"id": admin["id"]}, {"$set": {"code": new, "code_changed_at": datetime.now(timezone.utc).isoformat()}})
+    return {"ok": True}
+
+
+@api_router.get("/admin/extra-bonus")
+async def extra_bonus_list(week_start: Optional[str] = None, admin=Depends(require_admin)):
+    ws = week_start_of(today_local()) - timedelta(days=7)
+    if week_start:
+        try:
+            ws = week_start_of(date.fromisoformat(week_start))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Fecha inválida")
+    rows, _ = await build_week_table(ws)
+    workers = {w["id"]: w for w in await db.users.find({"role": "worker"}, {"_id": 0}).to_list(1000)}
+    marks = {m["worker_id"]: m for m in await db.extra_bonus.find({"week_start": ws.isoformat()}, {"_id": 0}).to_list(1000)}
+    items = []
+    for r in rows:
+        if r["minutes"] <= 300:
+            continue
+        w = workers.get(r["id"], {})
+        m = marks.get(r["id"], {})
+        items.append({
+            "worker_id": r["id"],
+            "name": r["name"],
+            "minutes": r["minutes"],
+            "hours": r["hours"],
+            "member_done": ws.isoformat() in (w.get("weekly_report_done") or []),
+            "received": bool(m.get("received")),
+            "paid": bool(m.get("paid")),
+            "amount": float(m.get("amount") or 0),
+            "binance_pay_id": w.get("binance_pay_id") or "",
+        })
+    return {"week_start": ws.isoformat(), "week_end": (ws + timedelta(days=6)).isoformat(), "items": items}
+
+
+@api_router.post("/admin/extra-bonus")
+async def extra_bonus_mark(body: ExtraBonusBody, admin=Depends(require_admin)):
+    try:
+        ws = week_start_of(date.fromisoformat(body.week_start)).isoformat()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Fecha inválida")
+    updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if body.received is not None:
+        updates["received"] = body.received
+    if body.paid is not None:
+        updates["paid"] = body.paid
+    if body.amount is not None:
+        if body.amount < 0:
+            raise HTTPException(status_code=400, detail="Monto inválido")
+        updates["amount"] = round(body.amount, 2)
+    await db.extra_bonus.update_one({"worker_id": body.worker_id, "week_start": ws}, {"$set": updates}, upsert=True)
+    doc = await db.extra_bonus.find_one({"worker_id": body.worker_id, "week_start": ws}, {"_id": 0})
+    return doc
+
+
 @api_router.get("/admin/rates")
 async def get_rates(admin=Depends(require_admin)):
     ws = week_start_of(today_local())
@@ -924,7 +1004,7 @@ async def startup():
     else:
         await db.users.update_one(
             {"role": "admin"},
-            {"$set": {"code": ADMIN_CODE, "name": "Wuilber", "email": ADMIN_EMAIL, "active": True}},
+            {"$set": {"name": "Wuilber", "email": ADMIN_EMAIL, "active": True}},
         )
     try:
         await asyncio.to_thread(init_storage)

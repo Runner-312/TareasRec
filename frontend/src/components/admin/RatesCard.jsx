@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Coins, Save } from "lucide-react";
+import { Coins, Save, History, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import api, { fmtDate } from "@/lib/api";
+import api, { fmtDate, fmtMoney } from "@/lib/api";
 
 export default function RatesCard() {
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["rates"], queryFn: () => api.get("/admin/rates").then((r) => r.data) });
   const [kgen, setKgen] = useState("");
   const [bonus, setBonus] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const history = data?.history || [];
   useEffect(() => {
     if (data) {
       setKgen(String(data.current.kgen_rate));
@@ -56,6 +58,24 @@ export default function RatesCard() {
       >
         <Save className="w-4 h-4" /> Guardar tarifas
       </button>
+
+      <div className="border-t border-slate-100 pt-3">
+        <button data-testid="rates-history-toggle" onClick={() => setShowHistory((s) => !s)} className="w-full flex items-center justify-between text-xs font-bold text-slate-600 py-1">
+          <span className="flex items-center gap-1.5"><History className="w-4 h-4 text-slate-400" /> Historial de tarifas por semana</span>
+          <ChevronDown className={`w-4 h-4 transition-transform ${showHistory ? "rotate-180" : ""}`} />
+        </button>
+        {showHistory && (
+          <div className="mt-2 space-y-1" data-testid="rates-history">
+            {history.length === 0 && <p className="text-[11px] text-slate-400 text-center py-2">Aún no hay cambios de tarifa; aplican las tarifas por defecto.</p>}
+            {history.map((h) => (
+              <div key={h.week_start} className="flex items-center justify-between text-xs rounded-lg bg-slate-50 px-3 py-2" data-testid={`rates-history-row-${h.week_start}`}>
+                <span className="font-semibold text-slate-600">Desde el {fmtDate(h.week_start)}</span>
+                <span className="font-mono font-bold"><span className="text-emerald-600">KGEN {fmtMoney(h.kgen_rate)}</span> · <span className="text-amber-600">BONO {fmtMoney(h.bonus_rate)}</span></span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

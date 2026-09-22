@@ -3,7 +3,7 @@ import { CheckCircle2, CircleDollarSign, Clock3, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import api, { fmtDate, fmtMoney, fmtMinutes } from "@/lib/api";
 import PayoutExport from "@/components/admin/PayoutExport";
-import RatesCard from "@/components/admin/RatesCard";
+import ExtraBonusCard from "@/components/admin/ExtraBonusCard";
 
 export default function OverviewTab() {
   const qc = useQueryClient();
@@ -54,7 +54,7 @@ export default function OverviewTab() {
       </section>
 
       <section className="grid lg:grid-cols-[1.05fr_0.95fr] gap-6 items-start">
-        <RatesCard />
+        <ExtraBonusCard />
       <PayoutExport />
 
         <div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, LayoutDashboard, LineChart as LineChartIcon, LogOut, Trophy, Users, Video } from "lucide-react";
+import { ClipboardList, LayoutDashboard, LineChart as LineChartIcon, LogOut, Settings, Trophy, Users, Video } from "lucide-react";
 import { useAuth } from "@/App";
 import ThemeToggle from "@/components/ThemeToggle";
 import FlyingBills from "@/components/FlyingBills";
@@ -9,6 +9,7 @@ import StatsTab from "@/components/admin/StatsTab";
 import RankingsTab from "@/components/admin/RankingsTab";
 import WorkersTab from "@/components/admin/WorkersTab";
 import EntriesTab from "@/components/admin/EntriesTab";
+import SettingsTab from "@/components/admin/SettingsTab";
 
 const TABS = [
   { id: "resumen", label: "Resumen", mobileLabel: "Inicio", title: "Resumen general", description: "Pagos, actividad y próximos pasos", icon: LayoutDashboard },
@@ -16,6 +17,7 @@ const TABS = [
   { id: "rankings", label: "Rankings", mobileLabel: "Ranking", title: "Clasificación", description: "Posiciones semanales y globales", icon: Trophy },
   { id: "miembros", label: "Miembros", mobileLabel: "Equipo", title: "Equipo", description: "Accesos y datos de cada miembro", icon: Users },
   { id: "registros", label: "Registros", mobileLabel: "Registros", title: "Registros diarios", description: "Revisa capturas y valida el trabajo", icon: ClipboardList },
+  { id: "ajustes", label: "Ajustes", mobileLabel: "Ajustes", title: "Ajustes", description: "Tarifas por hora, historial y código de acceso", icon: Settings },
 ];
 
 export default function AdminPage() {
@@ -81,6 +83,7 @@ export default function AdminPage() {
         {tab === "rankings" && <RankingsTab />}
         {tab === "miembros" && <WorkersTab />}
         {tab === "registros" && <EntriesTab />}
+        {tab === "ajustes" && <SettingsTab />}
       </main>
 
       <nav className="mobile-admin-nav sm:hidden fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur-xl px-1.5 pt-2" data-testid="admin-tabs-mobile" aria-label="Secciones del panel">

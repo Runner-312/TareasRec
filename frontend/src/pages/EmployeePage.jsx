@@ -14,7 +14,7 @@ import EntriesList from "@/components/member/EntriesList";
 import MemberNotices from "@/components/member/MemberNotices";
 import EarningsChart from "@/components/member/EarningsChart";
 import Reminders from "@/components/member/Reminders";
-import FlyingBills from "@/components/FlyingBills";
+import DoodleBackground from "@/components/DoodleBackground";
 import { RankBadge, StreakBadge } from "@/components/Badges";
 
 export default function EmployeePage() {
@@ -37,8 +37,8 @@ export default function EmployeePage() {
   const w = data.week;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-12 relative">
-      <FlyingBills />
+    <div className="min-h-screen member-bg pb-12 relative">
+      <DoodleBackground />
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B132B]/95 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center">
