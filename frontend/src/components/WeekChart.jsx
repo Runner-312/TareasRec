@@ -1,5 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
+const MARGIN = { top: 8, right: 8, left: -18, bottom: 0 };
+
 const PALETTE = [
   "#94A3B8", "#F59E0B", "#10B981", "#F472B6", "#A78BFA", "#FB7185",
   "#34D399", "#FBBF24", "#60A5FA", "#F97316", "#2DD4BF", "#E879F9",
@@ -18,7 +20,7 @@ export default function WeekChart({ days, workers }) {
   return (
     <div data-testid="minimalist-line-chart" className="w-full h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+        <LineChart data={data} margin={MARGIN}>
           <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
           <XAxis
             dataKey="day"

@@ -3,8 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Camera, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import api, { fmtDate } from "@/lib/api";
-
-const DOW = ["Mié", "Jue", "Vie", "Sáb", "Dom", "Lun", "Mar"];
+import DayPicker, { dayLabel } from "@/components/member/DayPicker";
 
 export default function EntryForm({ days, dayMinutes, today, weekStart, weekEnd }) {
   const qc = useQueryClient();
@@ -53,42 +52,13 @@ export default function EntryForm({ days, dayMinutes, today, weekStart, weekEnd 
         <p className="font-bold text-sm text-slate-800">Tu semana</p>
         <p className="text-xs text-slate-400 font-medium">{fmtDate(weekStart)} a {fmtDate(weekEnd)}</p>
       </div>
-      <div className="grid grid-cols-7 gap-1.5" data-testid="entry-day-picker">
-        {days.map((d, i) => {
-          const future = d.date > today;
-          const done = !!dayMinutes[d.date];
-          const active = d.date === selected;
-          return (
-            <button
-              key={d.date}
-              type="button"
-              data-testid={`entry-day-${d.date}`}
-              data-selected={active || undefined}
-              disabled={future}
-              onClick={() => setSelected(d.date)}
-              className={`rounded-xl py-2 flex flex-col items-center gap-0.5 border transition-all active:scale-95 ${
-                active
-                  ? "border-emerald-400 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-400"
-                  : done
-                  ? "border-emerald-100 bg-emerald-50/60 text-emerald-700"
-                  : future
-                  ? "border-slate-100 text-slate-300"
-                  : "border-slate-100 bg-slate-50 text-slate-600"
-              }`}
-            >
-              <span className="text-[10px] font-semibold">{DOW[i]}</span>
-              <span className="font-mono font-extrabold text-base leading-none">{Number(d.date.slice(-2))}</span>
-              <span className="text-[9px] font-mono font-bold h-3">{done ? `${dayMinutes[d.date]}m` : ""}</span>
-            </button>
-          );
-        })}
-      </div>
+      <DayPicker days={days} dayMinutes={dayMinutes} today={today} selected={selected} onSelect={setSelected} />
 
       {registered ? (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3" data-testid="today-registered-card">
           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
           <p className="text-xs font-semibold text-emerald-800">
-            Ya enviaste el reporte de {DOW[days.findIndex((d) => d.date === selected)]} {fmtDate(selected)} ({dayMinutes[selected]} min). Si te equivocaste, bórralo abajo en "Tus últimos registros".
+            Ya enviaste el reporte de {dayLabel(days, selected)} {fmtDate(selected)} ({dayMinutes[selected]} min). Si te equivocaste, bórralo abajo en "Tus últimos registros".
           </p>
         </div>
       ) : (
@@ -126,7 +96,7 @@ export default function EntryForm({ days, dayMinutes, today, weekStart, weekEnd 
             disabled={sending}
             className="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold rounded-xl py-3.5 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50"
           >
-            {sending ? "Enviando…" : `Enviar reporte de ${DOW[days.findIndex((d) => d.date === selected)]} ${fmtDate(selected)}`}
+            {sending ? "Enviando…" : `Enviar reporte de ${dayLabel(days, selected)} ${fmtDate(selected)}`}
           </button>
         </>
       )}

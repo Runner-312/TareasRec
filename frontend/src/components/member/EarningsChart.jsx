@@ -7,6 +7,12 @@ const VIEWS = [
   { key: "kgen", title: "Pagos de KGEN", sub: "Lo que cobras cada lunes", color: "#10B981", grid: "#D1FAE5" },
   { key: "bonus", title: "Pagos del BONO", sub: "Lo que cobras cada martes", color: "#F59E0B", grid: "#FDE68A" },
 ];
+const MARGIN = { top: 8, right: 8, left: -14, bottom: 0 };
+const X_TICK = { fontSize: 11, fill: "#64748B" };
+const Y_TICK = { fontSize: 11, fill: "#94A3B8" };
+const TOOLTIP_STYLE = { background: "#0B132B", border: "none", borderRadius: 12, fontSize: 12, color: "#fff" };
+const ITEM_STYLE = { padding: 0, color: "#fff" };
+const fmtAxis = (n) => `$${n}`;
 
 export default function EarningsChart({ earnings }) {
   const [i, setI] = useState(0);
@@ -29,15 +35,15 @@ export default function EarningsChart({ earnings }) {
       </div>
       <div className="w-full h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
+          <LineChart data={data} margin={MARGIN}>
             <CartesianGrid vertical={false} stroke="#E2E8F0" strokeDasharray="3 3" />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748B" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} tickFormatter={(n) => `$${n}`} />
+            <XAxis dataKey="label" tick={X_TICK} axisLine={false} tickLine={false} />
+            <YAxis tick={Y_TICK} axisLine={false} tickLine={false} tickFormatter={fmtAxis} />
             <Tooltip
               formatter={(val, _n, p) => [`${fmtMoney(val)}${p.payload.paid ? " · pagado" : p.payload.current ? " · en curso" : ""}`, v.title]}
-              contentStyle={{ background: "#0B132B", border: "none", borderRadius: 12, fontSize: 12, color: "#fff" }}
+              contentStyle={TOOLTIP_STYLE}
               labelStyle={{ color: v.color, fontWeight: 700 }}
-              itemStyle={{ padding: 0, color: "#fff" }}
+              itemStyle={ITEM_STYLE}
             />
             <Line type="monotone" dataKey="value" stroke={v.color} strokeWidth={3} dot={{ r: 4, fill: v.color, strokeWidth: 0 }} activeDot={{ r: 6 }} />
           </LineChart>

@@ -711,23 +711,18 @@ async def weekly_report_done(user=Depends(get_current_user)):
     return {"done": prev_ws}
 
 
-@api_router.get("/me/dashboard")
-async def me_dashboard(user=Depends(get_current_user)):
-    if user.get("role") != "worker":
-        raise HTTPException(status_code=403, detail="Solo miembros")
-    today = today_local()
-    ws = week_start_of(today)
-    we = ws + timedelta(days=6)
-    payday = ws + timedelta(days=13)
-    kgen_payday = ws + timedelta(days=12)
-    entries = await db.entries.find({"worker_id": user["id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
-    payments = await db.payments.find({"worker_id": user["id"]}, {"_id": 0}).to_list(1000)
-    paid_weeks = {p["week_start"] for p in payments}
+def build_member_weeks(entries, paid_weeks, ws, today):
     week_starts = {week_start_of(date.fromisoformat(e["date"])) for e in entries} | {ws, ws + timedelta(days=7)}
     weeks = []
     for w0 in sorted(week_starts):
         w1 = w0 + timedelta(days=6)
         m = sum(e["minutes"] for e in entries if w0.isoformat() <= e["date"] <= w1.isoformat())
+        if w0 == ws:
+            status = "current"
+        elif w0 > ws:
+            status = "future"
+        else:
+            status = "past"
         weeks.append({
             "start": w0.isoformat(),
             "end": w1.isoformat(),
@@ -737,73 +732,113 @@ async def me_dashboard(user=Depends(get_current_user)):
             "qualifies": m > GOAL_MINUTES,
             "paid": w0.isoformat() in paid_weeks,
             "closed": w1 < today,
-            "status": "current" if w0 == ws else ("future" if w0 > ws else "past"),
+            "status": status,
         })
-    day_minutes = {e["date"]: e["minutes"] for e in entries}
-    day_reviewed = [e["date"] for e in entries if e.get("reviewed")]
-    week_minutes = sum(e["minutes"] for e in entries if ws.isoformat() <= e["date"] <= we.isoformat())
-    today_entry = next((e for e in entries if e["date"] == today.isoformat()), None)
-    rows, _ = await build_week_table(ws)
-    me_row = next((r for r in rows if r["id"] == user["id"]), None)
-    weekly = [
-        {"rank": r["rank"], "id": r["id"], "name": r["name"], "minutes": r["minutes"], "hours": r["hours"]}
-        for r in rows
-    ]
-    global_ranking = await build_global_ranking()
-    my_global = next((g for g in global_ranking if g["id"] == user["id"]), None)
-    remaining = max(0, GOAL_MINUTES - week_minutes)
-    entry_dates = {e["date"] for e in entries}
+    return weeks
+
+
+async def compute_streaks(user, entry_dates, today):
     streak = 0
     cursor = today if today.isoformat() in entry_dates else today - timedelta(days=1)
     while cursor.isoformat() in entry_dates:
         streak += 1
         cursor -= timedelta(days=1)
-    best_streak = 0
+    best = 0
     run = 0
     prev = None
     for d in sorted(date.fromisoformat(x) for x in entry_dates):
         run = run + 1 if prev is not None and (d - prev).days == 1 else 1
-        best_streak = max(best_streak, run)
+        best = max(best, run)
         prev = d
-    best_streak = max(best_streak, int(user.get("best_streak") or 0), streak)
-    if best_streak != int(user.get("best_streak") or 0):
-        await db.users.update_one({"id": user["id"]}, {"$set": {"best_streak": best_streak}})
-    days = []
-    for i in range(7):
-        d = (ws + timedelta(days=i)).isoformat()
-        days.append({"date": d, "label": DAY_LABELS[i], "total": sum(e["minutes"] for e in entries if e["date"] == d)})
-    rates = await rates_for_week(ws)
-    hours_now = week_minutes / 60
+    stored = int(user.get("best_streak") or 0)
+    best = max(best, stored, streak)
+    if best != stored:
+        await db.users.update_one({"id": user["id"]}, {"$set": {"best_streak": best}})
+    return streak, best
+
+
+async def build_earnings(user_id, weeks, payments):
     pay_map = {p["week_start"]: p for p in payments}
     earnings = []
-    rate_cache = {}
     for wk in weeks:
         if wk["status"] == "future":
             continue
         w0 = date.fromisoformat(wk["start"])
-        if w0 not in rate_cache:
-            rate_cache[w0] = await rates_for_week(w0)
-        r = rate_cache[w0]
+        rates = await rates_for_week(w0)
         p = pay_map.get(wk["start"])
         if p:
             bonus_total = p["amount"]
         else:
             wrows, _ = await build_week_table(w0)
-            mine = next((x for x in wrows if x["id"] == user["id"]), None)
+            mine = next((x for x in wrows if x["id"] == user_id), None)
             bonus_total = mine["total"] if mine else 0
         earnings.append({
             "week_start": wk["start"],
             "label": fmt_short(w0),
-            "kgen": round(wk["minutes"] / 60 * r["kgen_rate"], 2),
+            "kgen": round(wk["minutes"] / 60 * rates["kgen_rate"], 2),
             "bonus": round(bonus_total, 2),
             "minutes": wk["minutes"],
             "paid": bool(p),
             "current": wk["status"] == "current",
         })
+    return earnings
+
+
+def weekly_report_info(user, entries, ws, now):
     prev_ws = ws - timedelta(days=7)
-    prev_minutes = sum(e["minutes"] for e in entries if prev_ws.isoformat() <= e["date"] <= (prev_ws + timedelta(days=6)).isoformat())
+    prev_we = prev_ws + timedelta(days=6)
+    prev_minutes = sum(e["minutes"] for e in entries if prev_ws.isoformat() <= e["date"] <= prev_we.isoformat())
+    notice_from = datetime.combine(ws, datetime.min.time(), tzinfo=TZ).replace(hour=12)
+    return {
+        "due": prev_minutes > 300 and now >= notice_from,
+        "done": prev_ws.isoformat() in (user.get("weekly_report_done") or []),
+        "prev_week_start": prev_ws.isoformat(),
+        "prev_week_end": prev_we.isoformat(),
+        "prev_minutes": prev_minutes,
+    }
+
+
+def week_summary(ws, we, week_minutes, me_row):
+    row = me_row or {}
+    return {
+        "start": ws.isoformat(),
+        "end": we.isoformat(),
+        "payday": (ws + timedelta(days=13)).isoformat(),
+        "kgen_payday": (ws + timedelta(days=12)).isoformat(),
+        "minutes": week_minutes,
+        "hours": round(week_minutes / 60, 2),
+        "goal_minutes": GOAL_MINUTES,
+        "remaining_minutes": max(0, GOAL_MINUTES - week_minutes),
+        "qualifies": row.get("qualifies", False),
+        "base": row.get("base", 0),
+        "bonus_pct": row.get("bonus_pct", 0),
+        "bonus": row.get("bonus", 0),
+        "estimated_total": row.get("total", 0),
+        "kgen": row.get("kgen", 0),
+        "rank": row.get("rank"),
+    }
+
+
+@api_router.get("/me/dashboard")
+async def me_dashboard(user=Depends(get_current_user)):
+    if user.get("role") != "worker":
+        raise HTTPException(status_code=403, detail="Solo miembros")
+    today = today_local()
     now = now_local()
-    weekly_due = prev_minutes > 300 and now >= datetime.combine(ws, datetime.min.time(), tzinfo=TZ).replace(hour=12)
+    ws = week_start_of(today)
+    we = ws + timedelta(days=6)
+    entries = await db.entries.find({"worker_id": user["id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
+    payments = await db.payments.find({"worker_id": user["id"]}, {"_id": 0}).to_list(1000)
+    weeks = build_member_weeks(entries, {p["week_start"] for p in payments}, ws, today)
+    week_minutes = sum(e["minutes"] for e in entries if ws.isoformat() <= e["date"] <= we.isoformat())
+    today_entry = next((e for e in entries if e["date"] == today.isoformat()), None)
+    rows, _ = await build_week_table(ws)
+    me_row = next((r for r in rows if r["id"] == user["id"]), None)
+    global_ranking = await build_global_ranking()
+    my_global = next((g for g in global_ranking if g["id"] == user["id"]), None)
+    streak, best_streak = await compute_streaks(user, {e["date"] for e in entries}, today)
+    rates = await rates_for_week(ws)
+    hours_now = week_minutes / 60
     return {
         "name": user["name"],
         "now": now.isoformat(),
@@ -814,49 +849,30 @@ async def me_dashboard(user=Depends(get_current_user)):
             "bonus_if_goal": round(hours_now * rates["bonus_rate"], 2),
             "bonus_now": me_row["total"] if me_row else 0,
         },
-        "earnings": earnings,
-        "weekly_report": {
-            "due": weekly_due,
-            "done": prev_ws.isoformat() in (user.get("weekly_report_done") or []),
-            "prev_week_start": prev_ws.isoformat(),
-            "prev_week_end": (prev_ws + timedelta(days=6)).isoformat(),
-            "prev_minutes": prev_minutes,
-        },
+        "earnings": await build_earnings(user["id"], weeks, payments),
+        "weekly_report": weekly_report_info(user, entries, ws, now),
         "binance_pay_id": user.get("binance_pay_id") or "",
         "usdt_bep20_address": user.get("usdt_bep20_address") or "",
         "streak": streak,
         "on_fire": bool(entries) and entries[0]["minutes"] > 300,
         "best_streak": best_streak,
-        "days": days,
+        "days": [
+            {"date": (ws + timedelta(days=i)).isoformat(), "label": DAY_LABELS[i], "total": sum(e["minutes"] for e in entries if e["date"] == (ws + timedelta(days=i)).isoformat())}
+            for i in range(7)
+        ],
         "weeks": weeks,
-        "day_minutes": day_minutes,
-        "day_reviewed": day_reviewed,
+        "day_minutes": {e["date"]: e["minutes"] for e in entries},
+        "day_reviewed": [e["date"] for e in entries if e.get("reviewed")],
         "today": {
             "registered": today_entry is not None,
             "minutes": today_entry["minutes"] if today_entry else 0,
             "screenshot_path": today_entry["screenshot_path"] if today_entry else None,
         },
-        "week": {
-            "start": ws.isoformat(),
-            "end": we.isoformat(),
-            "payday": payday.isoformat(),
-            "kgen_payday": kgen_payday.isoformat(),
-            "minutes": week_minutes,
-            "hours": round(week_minutes / 60, 2),
-            "goal_minutes": GOAL_MINUTES,
-            "remaining_minutes": remaining,
-            "qualifies": me_row["qualifies"] if me_row else False,
-            "base": me_row["base"] if me_row else 0,
-            "bonus_pct": me_row["bonus_pct"] if me_row else 0,
-            "bonus": me_row["bonus"] if me_row else 0,
-            "estimated_total": me_row["total"] if me_row else 0,
-            "kgen": me_row["kgen"] if me_row else 0,
-            "rank": me_row["rank"] if me_row else None,
-        },
+        "week": week_summary(ws, we, week_minutes, me_row),
         "global_rank": my_global["rank"] if my_global else None,
         "global_minutes": my_global["minutes"] if my_global else 0,
         "historical_minutes": int(user.get("historical_minutes") or 0),
-        "weekly": weekly,
+        "weekly": [{"rank": r["rank"], "id": r["id"], "name": r["name"], "minutes": r["minutes"], "hours": r["hours"]} for r in rows],
         "global": global_ranking,
         "entries": entries[:30],
     }
@@ -865,7 +881,7 @@ async def me_dashboard(user=Depends(get_current_user)):
 @api_router.get("/files/{path:path}")
 async def serve_file(path: str, token: str = Query(...)):
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
     if not path.startswith(f"{APP_NAME}/"):
