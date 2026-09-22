@@ -13,7 +13,15 @@ api.interceptors.request.use((config) => {
 export const fileUrl = (path) =>
   `${API}/files/${path}?token=${localStorage.getItem("token")}`;
 
+export const TZ = "America/Caracas";
+
 export const fmtMoney = (n) => `$${Number(n || 0).toFixed(2)}`;
+
+export const fmtDateTime = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString("es-VE", { timeZone: TZ, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true });
+};
 
 export const fmtMinutes = (m) => {
   const h = Math.floor((m || 0) / 60);

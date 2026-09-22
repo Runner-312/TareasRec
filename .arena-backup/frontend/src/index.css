@@ -47,7 +47,7 @@
 
 /* Glass: tarjetas translúcidas con desenfoque para ver el fondo */
 .bg-white:not(input):not(select):not(option) {
-    background-color: rgba(255, 255, 255, 0.94) !important;
+    background-color: rgba(255, 255, 255, 0.72) !important;
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     backdrop-filter: blur(14px) saturate(140%);
 }
@@ -63,11 +63,11 @@
 .bg-sky-50 { background-color: rgba(240, 249, 255, 0.8) !important; }
 .bg-emerald-50 { background-color: rgba(236, 253, 245, 0.8) !important; }
 .bg-amber-50 { background-color: rgba(255, 251, 235, 0.85) !important; }
-.dark .bg-white:not(input):not(select):not(option) { background-color: rgba(19, 28, 49, 0.92) !important; }
+.dark .bg-white:not(input):not(select):not(option) { background-color: rgba(19, 28, 49, 0.72) !important; }
 .dark .bg-\[\#0B132B\]:not(header) { background-color: rgba(6, 11, 24, 0.8) !important; }
 .dark .bg-sky-50, .dark .bg-emerald-50, .dark .bg-amber-50, .dark .bg-slate-50 { background-color: rgba(27, 37, 64, 0.72) !important; }
-.bill { color: rgba(16, 185, 129, 0.18); }
-.dark .bill { color: rgba(52, 211, 153, 0.14); }
+.bill { color: rgba(16, 185, 129, 0.35); }
+.dark .bill { color: rgba(52, 211, 153, 0.28); }
 
 /* Modo oscuro: remapeo de utilidades usadas en toda la app */
 .dark .bg-\[\#F8FAFC\] { background-color: #0B1120; }
@@ -239,44 +239,4 @@
         border-top-color: inherit;
         border-bottom-color: inherit;
     }
-}
-
-
-/* Acabado de interfaz: foco visible, navegación móvil y movimiento accesible */
-html {
-    background: #F8FAFC;
-    scroll-behavior: smooth;
-}
-body {
-    min-width: 320px;
-    min-height: 100vh;
-}
-button, a, input, select, textarea {
-    -webkit-tap-highlight-color: transparent;
-}
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-    outline: 3px solid rgba(56, 189, 248, 0.45);
-    outline-offset: 2px;
-}
-::selection {
-    background: rgba(14, 165, 233, 0.24);
-}
-.mobile-admin-nav {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-    box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.08);
-}
-.dark .mobile-admin-nav {
-    background-color: rgba(19, 28, 49, 0.96) !important;
-    border-color: #24304D;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
-    }
-    [data-testid="flying-bills-bg"] { display: none; }
 }

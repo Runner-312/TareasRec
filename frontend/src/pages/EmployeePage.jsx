@@ -12,6 +12,8 @@ import GoalCard from "@/components/member/GoalCard";
 import RankSection from "@/components/member/RankSection";
 import EntriesList from "@/components/member/EntriesList";
 import MemberNotices from "@/components/member/MemberNotices";
+import EarningsChart from "@/components/member/EarningsChart";
+import Reminders from "@/components/member/Reminders";
 import FlyingBills from "@/components/FlyingBills";
 import { RankBadge, StreakBadge } from "@/components/Badges";
 
@@ -66,13 +68,17 @@ export default function EmployeePage() {
       </header>
 
       <main className="max-w-md mx-auto px-4 py-6 space-y-8 relative z-10">
+        <Reminders registeredToday={data.today.registered} weeklyReport={data.weekly_report} />
+
         <section className="fade-up">
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Registrar minutos de hoy</h2>
-          <p className="text-sm text-slate-500 mt-1">Anota tus minutos y sube la captura como prueba. Una vez guardado, no se puede modificar.</p>
-          <EntryForm today={data.today} />
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Reporte diario</h2>
+          <p className="text-sm text-slate-500 mt-1">Elige el día, anota tus minutos y sube la captura como prueba. Si te equivocas, puedes borrar el reporte y enviarlo de nuevo.</p>
+          <EntryForm days={data.days} dayMinutes={data.day_minutes} today={data.today_date} weekStart={w.start} weekEnd={w.end} />
         </section>
 
-        <SummaryCards week={w} globalMinutes={data.global_minutes} historicalMinutes={data.historical_minutes} />
+        <SummaryCards week={w} rates={data.rates} estimate={data.estimate} globalMinutes={data.global_minutes} historicalMinutes={data.historical_minutes} />
+        <GoalCard week={w} userId={user?.id} todayISO={data.today_date} />
+        <EarningsChart earnings={data.earnings} />
         <MemberNotices streak={data.streak} bestStreak={data.best_streak} binancePayId={data.binance_pay_id} walletAddress={data.usdt_bep20_address} />
 
         <section className="fade-up">
@@ -91,10 +97,9 @@ export default function EmployeePage() {
           <MyWeekChart days={data.days} />
         </section>
 
-        <GoalCard week={w} name={data.name} />
         <RankSection data={data} userId={user?.id} />
 
-        <EntriesList entries={data.entries} />
+        <EntriesList entries={data.entries} weekStart={w.start} weekEnd={w.end} />
       </main>
     </div>
   );

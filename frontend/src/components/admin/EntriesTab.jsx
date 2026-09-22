@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ImageIcon, Trash2, Check, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { toast } from "sonner";
-import api, { fileUrl, fmtMinutes, fmtDateLong, fmtDate } from "@/lib/api";
+import api, { fileUrl, fmtMinutes, fmtDateLong, fmtDate, fmtDateTime } from "@/lib/api";
 import { currentWeekStartISO, shiftWeek } from "@/lib/week";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -106,6 +106,7 @@ export default function EntriesTab() {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-slate-800 truncate">{e.worker_name}</p>
                     <p className={`text-xs ${e.reviewed ? "text-emerald-600 font-semibold" : "text-slate-400"}`}>{e.reviewed ? "Revisado" : "Toca para ver la captura"}</p>
+                    <p className="text-[10px] text-slate-400 font-mono" data-testid={`entry-uploaded-${e.id}`}>Subido: {fmtDateTime(e.created_at)}</p>
                   </div>
                   <span className="font-mono font-bold text-sky-600 text-sm">{fmtMinutes(e.minutes)}</span>
                 </button>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Check, Banknote } from "lucide-react";
-import { toISODate, shiftWeek } from "@/lib/week";
+import { toISODate, shiftWeek, todayCaracasISO } from "@/lib/week";
 import { fmtDate } from "@/lib/api";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
@@ -63,7 +63,7 @@ const COLUMN_TABS = { 0: { label: "KGEN", cls: "border-emerald-400 bg-emerald-40
 const colStyle = (i) => ({ left: `calc(${i} * (100% - 6 * 0.25rem) / 7 + ${i} * 0.25rem - 3px)`, width: "calc((100% - 6 * 0.25rem) / 7 + 6px)" });
 
 export default function PayCalendar({ weeks = [], dayMinutes = {}, dayReviewed = [], currentWeekStart }) {
-  const today = toISODate(new Date());
+  const today = todayCaracasISO();
   const [focusWeek, setFocusWeek] = useState(currentWeekStart);
   const [month, setMonth] = useState(() => monthOf(currentWeekStart));
   const [open, setOpen] = useState(null);

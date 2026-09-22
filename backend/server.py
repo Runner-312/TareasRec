@@ -8,6 +8,7 @@ import uuid
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta, date
+from zoneinfo import ZoneInfo
 from typing import Optional
 
 import jwt
@@ -72,21 +73,43 @@ api_router = APIRouter(prefix="/api")
 bearer = HTTPBearer(auto_error=False)
 
 DAY_LABELS = ["Mié", "Jue", "Vie", "Sáb", "Dom", "Lun", "Mar"]
+MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+def fmt_short(d: date) -> str:
+    return f"{d.day} {MONTH_SHORT[d.month - 1]}"
 BONUS = {1: 0.30, 2: 0.20, 3: 0.10}
 RATE_PER_HOUR = 0.30
 GOAL_MINUTES = 600
 PAYOUT_CURRENCY = "USDT"
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "binance_template.xlsx")
+TZ = ZoneInfo("America/Caracas")
+DEFAULT_RATES = {"kgen_rate": 4.0, "bonus_rate": RATE_PER_HOUR}
+
+
+def now_local() -> datetime:
+    return datetime.now(TZ)
+
+
+def today_local() -> date:
+    return now_local().date()
 
 
 def week_start_of(d: date) -> date:
     return d - timedelta(days=(d.weekday() - 2) % 7)
 
 
-def calc_payment(minutes: int, rank: Optional[int]):
+async def rates_for_week(ws: date) -> dict:
+    doc = await db.rates.find({"week_start": {"$lte": ws.isoformat()}}, {"_id": 0}).sort("week_start", -1).limit(1).to_list(1)
+    if doc:
+        return {"kgen_rate": float(doc[0]["kgen_rate"]), "bonus_rate": float(doc[0]["bonus_rate"]), "week_start": doc[0]["week_start"]}
+    return {**DEFAULT_RATES, "week_start": None}
+
+
+def calc_payment(minutes: int, rank: Optional[int], bonus_rate: float = RATE_PER_HOUR):
     hours = minutes / 60
     qualifies = hours > 10
-    base = round(hours * RATE_PER_HOUR, 2) if qualifies else 0.0
+    base = round(hours * bonus_rate, 2) if qualifies else 0.0
     bonus_pct = BONUS.get(rank, 0.0) if qualifies and rank else 0.0
     bonus = round(base * bonus_pct, 2)
     return {
@@ -96,6 +119,7 @@ def calc_payment(minutes: int, rank: Optional[int]):
         "bonus_pct": bonus_pct,
         "bonus": bonus,
         "total": round(base + bonus, 2),
+        "bonus_rate": bonus_rate,
     }
 
 
@@ -140,9 +164,11 @@ async def build_week_table(ws: date):
     for w in workers:
         rows.append({"id": w["id"], "name": w["name"], "minutes": minutes_by.get(w["id"], 0)})
     rows.sort(key=lambda r: (-r["minutes"], r["name"].lower()))
+    rates = await rates_for_week(ws)
     for i, r in enumerate(rows):
         r["rank"] = i + 1 if r["minutes"] > 0 else None
-        r.update(calc_payment(r["minutes"], r["rank"]))
+        r.update(calc_payment(r["minutes"], r["rank"], rates["bonus_rate"]))
+        r["kgen"] = round(r["minutes"] / 60 * rates["kgen_rate"], 2)
     paid = await db.payments.find({"week_start": ws.isoformat()}, {"_id": 0}).to_list(10000)
     paid_map = {p["worker_id"]: p for p in paid}
     for r in rows:
@@ -204,6 +230,29 @@ class PaymentBody(BaseModel):
     week_start: str
 
 
+class RatesBody(BaseModel):
+    kgen_rate: float
+    bonus_rate: float
+
+
+@api_router.get("/admin/rates")
+async def get_rates(admin=Depends(require_admin)):
+    ws = week_start_of(today_local())
+    current = await rates_for_week(ws)
+    history = await db.rates.find({}, {"_id": 0}).sort("week_start", -1).to_list(52)
+    return {"current": current, "week_start": ws.isoformat(), "history": history}
+
+
+@api_router.put("/admin/rates")
+async def set_rates(body: RatesBody, admin=Depends(require_admin)):
+    if body.kgen_rate < 0 or body.bonus_rate < 0:
+        raise HTTPException(status_code=400, detail="Las tarifas no pueden ser negativas")
+    ws = week_start_of(today_local()).isoformat()
+    doc = {"week_start": ws, "kgen_rate": round(body.kgen_rate, 4), "bonus_rate": round(body.bonus_rate, 4), "updated_at": datetime.now(timezone.utc).isoformat()}
+    await db.rates.update_one({"week_start": ws}, {"$set": doc}, upsert=True)
+    return doc
+
+
 @api_router.get("/")
 async def root():
     return {"message": "TareasREC API"}
@@ -229,7 +278,7 @@ async def me(user=Depends(get_current_user)):
 @api_router.get("/admin/workers")
 async def list_workers(admin=Depends(require_admin)):
     workers = await db.users.find({"role": "worker"}, {"_id": 0}).sort("name", 1).to_list(1000)
-    today = date.today()
+    today = today_local()
     ws = week_start_of(today)
     we = ws + timedelta(days=6)
     entries = await db.entries.find(
@@ -324,7 +373,7 @@ async def admin_week(start: Optional[str] = None, admin=Depends(require_admin)):
             raise HTTPException(status_code=400, detail="Fecha inválida")
         ws = week_start_of(ws)
     else:
-        ws = week_start_of(date.today())
+        ws = week_start_of(today_local())
     we = ws + timedelta(days=6)
     payday = ws + timedelta(days=13)
     rows, entries = await build_week_table(ws)
@@ -345,7 +394,7 @@ async def admin_week(start: Optional[str] = None, admin=Depends(require_admin)):
         "week_start": ws.isoformat(),
         "week_end": we.isoformat(),
         "payday": payday.isoformat(),
-        "is_current": ws == week_start_of(date.today()),
+        "is_current": ws == week_start_of(today_local()),
         "days": days,
         "workers_chart": workers_chart,
         "table": rows,
@@ -360,7 +409,7 @@ async def admin_week(start: Optional[str] = None, admin=Depends(require_admin)):
 
 @api_router.get("/admin/rankings")
 async def admin_rankings(admin=Depends(require_admin)):
-    ws = week_start_of(date.today())
+    ws = week_start_of(today_local())
     rows, _ = await build_week_table(ws)
     weekly = [
         {"rank": r["rank"], "id": r["id"], "name": r["name"], "minutes": r["minutes"], "hours": r["hours"]}
@@ -376,7 +425,7 @@ async def admin_overview(admin=Depends(require_admin)):
 
 
 async def build_overview():
-    today = date.today()
+    today = today_local()
     entries = await db.entries.find({}, {"_id": 0}).to_list(100000)
     workers = {w["id"]: w for w in await db.users.find({"role": "worker"}, {"_id": 0}).to_list(1000)}
     groups = {}
@@ -396,11 +445,14 @@ async def build_overview():
     paid = await db.payments.find({}, {"_id": 0}).to_list(10000)
     paid_keys = {(p["worker_id"], p["week_start"]) for p in paid}
     total_paid = round(sum(p["amount"] for p in paid), 2)
+    rate_cache = {}
     pending = []
     for (wid, ws), m in groups.items():
         if (wid, ws.isoformat()) in paid_keys:
             continue
-        calc = calc_payment(m, rank_of[(wid, ws)])
+        if ws not in rate_cache:
+            rate_cache[ws] = await rates_for_week(ws)
+        calc = calc_payment(m, rank_of[(wid, ws)], rate_cache[ws]["bonus_rate"])
         if calc["total"] > 0:
             pending.append({
                 "worker_id": wid,
@@ -443,7 +495,7 @@ async def mark_week_paid(worker_id: str, week_start: str):
         entries = await db.entries.find({"worker_id": worker_id}, {"_id": 0}).to_list(100000)
         we = ws + timedelta(days=6)
         m = sum(e["minutes"] for e in entries if ws.isoformat() <= e["date"] <= we.isoformat())
-        calc = calc_payment(m, None)
+        calc = calc_payment(m, None, (await rates_for_week(ws))["bonus_rate"])
         row = {"rank": None, **calc}
     doc = {
         "id": str(uuid.uuid4()),
@@ -506,7 +558,7 @@ async def payout_xlsx(admin=Depends(require_admin)):
         ws.cell(row=row, column=5, value=r["name"])
     buf = io.BytesIO()
     wb.save(buf)
-    filename = f"binance_pay_{date.today().isoformat()}.xlsx"
+    filename = f"binance_pay_{today_local().isoformat()}.xlsx"
     return Response(
         content=buf.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -589,16 +641,28 @@ async def set_my_wallet(body: WalletBody, user=Depends(get_current_user)):
 async def create_entry(
     minutes: int = Form(...),
     screenshot: UploadFile = File(...),
+    date_str: Optional[str] = Form(None, alias="date"),
     user=Depends(get_current_user),
 ):
     if user.get("role") != "worker":
         raise HTTPException(status_code=403, detail="Solo miembros")
     if minutes <= 0 or minutes > 1440:
         raise HTTPException(status_code=400, detail="Minutos inválidos")
-    today = date.today().isoformat()
-    existing = await db.entries.find_one({"worker_id": user["id"], "date": today})
+    today = today_local()
+    target = today
+    if date_str:
+        try:
+            target = date.fromisoformat(date_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Fecha inválida")
+    ws = week_start_of(today)
+    if target > today:
+        raise HTTPException(status_code=400, detail="No puedes reportar un día que aún no ha llegado")
+    if not (ws <= target <= ws + timedelta(days=6)):
+        raise HTTPException(status_code=400, detail="Solo puedes reportar días de la semana en curso (miércoles a martes)")
+    existing = await db.entries.find_one({"worker_id": user["id"], "date": target.isoformat()})
     if existing:
-        raise HTTPException(status_code=409, detail="Ya registraste tus minutos de hoy")
+        raise HTTPException(status_code=409, detail="Ya registraste tus minutos de ese día")
     ext = (screenshot.filename or "png").split(".")[-1].lower()
     if ext not in ("jpg", "jpeg", "png", "webp", "gif", "heic"):
         ext = "png"
@@ -614,7 +678,7 @@ async def create_entry(
     doc = {
         "id": str(uuid.uuid4()),
         "worker_id": user["id"],
-        "date": today,
+        "date": target.isoformat(),
         "minutes": minutes,
         "screenshot_path": result["path"],
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -624,11 +688,34 @@ async def create_entry(
     return doc
 
 
+@api_router.delete("/entries/{entry_id}")
+async def delete_my_entry(entry_id: str, user=Depends(get_current_user)):
+    if user.get("role") != "worker":
+        raise HTTPException(status_code=403, detail="Solo miembros")
+    entry = await db.entries.find_one({"id": entry_id, "worker_id": user["id"]}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    ws = week_start_of(today_local())
+    if not (ws.isoformat() <= entry["date"] <= (ws + timedelta(days=6)).isoformat()):
+        raise HTTPException(status_code=400, detail="Solo puedes borrar reportes de la semana en curso")
+    await db.entries.delete_one({"id": entry_id})
+    return {"deleted": True}
+
+
+@api_router.post("/me/weekly-report-done")
+async def weekly_report_done(user=Depends(get_current_user)):
+    if user.get("role") != "worker":
+        raise HTTPException(status_code=403, detail="Solo miembros")
+    prev_ws = (week_start_of(today_local()) - timedelta(days=7)).isoformat()
+    await db.users.update_one({"id": user["id"]}, {"$addToSet": {"weekly_report_done": prev_ws}})
+    return {"done": prev_ws}
+
+
 @api_router.get("/me/dashboard")
 async def me_dashboard(user=Depends(get_current_user)):
     if user.get("role") != "worker":
         raise HTTPException(status_code=403, detail="Solo miembros")
-    today = date.today()
+    today = today_local()
     ws = week_start_of(today)
     we = ws + timedelta(days=6)
     payday = ws + timedelta(days=13)
@@ -685,8 +772,56 @@ async def me_dashboard(user=Depends(get_current_user)):
     for i in range(7):
         d = (ws + timedelta(days=i)).isoformat()
         days.append({"date": d, "label": DAY_LABELS[i], "total": sum(e["minutes"] for e in entries if e["date"] == d)})
+    rates = await rates_for_week(ws)
+    hours_now = week_minutes / 60
+    pay_map = {p["week_start"]: p for p in payments}
+    earnings = []
+    rate_cache = {}
+    for wk in weeks:
+        if wk["status"] == "future":
+            continue
+        w0 = date.fromisoformat(wk["start"])
+        if w0 not in rate_cache:
+            rate_cache[w0] = await rates_for_week(w0)
+        r = rate_cache[w0]
+        p = pay_map.get(wk["start"])
+        if p:
+            bonus_total = p["amount"]
+        else:
+            wrows, _ = await build_week_table(w0)
+            mine = next((x for x in wrows if x["id"] == user["id"]), None)
+            bonus_total = mine["total"] if mine else 0
+        earnings.append({
+            "week_start": wk["start"],
+            "label": fmt_short(w0),
+            "kgen": round(wk["minutes"] / 60 * r["kgen_rate"], 2),
+            "bonus": round(bonus_total, 2),
+            "minutes": wk["minutes"],
+            "paid": bool(p),
+            "current": wk["status"] == "current",
+        })
+    prev_ws = ws - timedelta(days=7)
+    prev_minutes = sum(e["minutes"] for e in entries if prev_ws.isoformat() <= e["date"] <= (prev_ws + timedelta(days=6)).isoformat())
+    now = now_local()
+    weekly_due = prev_minutes > 300 and now >= datetime.combine(ws, datetime.min.time(), tzinfo=TZ).replace(hour=12)
     return {
         "name": user["name"],
+        "now": now.isoformat(),
+        "today_date": today.isoformat(),
+        "rates": rates,
+        "estimate": {
+            "kgen": round(hours_now * rates["kgen_rate"], 2),
+            "bonus_if_goal": round(hours_now * rates["bonus_rate"], 2),
+            "bonus_now": me_row["total"] if me_row else 0,
+        },
+        "earnings": earnings,
+        "weekly_report": {
+            "due": weekly_due,
+            "done": prev_ws.isoformat() in (user.get("weekly_report_done") or []),
+            "prev_week_start": prev_ws.isoformat(),
+            "prev_week_end": (prev_ws + timedelta(days=6)).isoformat(),
+            "prev_minutes": prev_minutes,
+        },
         "binance_pay_id": user.get("binance_pay_id") or "",
         "usdt_bep20_address": user.get("usdt_bep20_address") or "",
         "streak": streak,
@@ -715,6 +850,7 @@ async def me_dashboard(user=Depends(get_current_user)):
             "bonus_pct": me_row["bonus_pct"] if me_row else 0,
             "bonus": me_row["bonus"] if me_row else 0,
             "estimated_total": me_row["total"] if me_row else 0,
+            "kgen": me_row["kgen"] if me_row else 0,
             "rank": me_row["rank"] if me_row else None,
         },
         "global_rank": my_global["rank"] if my_global else None,
