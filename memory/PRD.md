@@ -66,3 +66,11 @@
 
 ## 2026-06 — Glassmorphism
 - index.css: .bg-white / .bg-[#0B132B] / bg-*-50 → fondos translúcidos con backdrop-filter blur(14px) (excluye inputs/select y header). Billetes de fondo más visibles (.bill color).
+
+## 2026-06 — Hora Caracas, reporte por día, tarifas, recordatorios, ganancias, frases
+- Backend: TZ America/Caracas (today_local/now_local). Colección rates {week_start,kgen_rate,bonus_rate}; rates_for_week(ws)=último <= ws; defaults KGEN 4.0 / BONO 0.30. GET/PUT /api/admin/rates. calc_payment usa bonus_rate por semana; filas incluyen kgen.
+- POST /api/entries acepta Form date (semana en curso, <= hoy). DELETE /api/entries/{id} (propio, semana en curso). POST /api/me/weekly-report-done.
+- /me/dashboard: now, today_date, rates, estimate{kgen,bonus_if_goal,bonus_now}, earnings[] por semana (kgen, bonus; usa pago registrado si existe), weekly_report{due (prev week >300min y miércoles >=12:00), done}.
+- Frontend: selector de día Mié–Mar en EntryForm; borrar reporte propio en EntriesList (con fecha/hora de subida en Caracas, también en admin); SummaryCards con KGEN/BONO estimados; GoalCard = barra fina + frase diaria (lib/quotes.js, 56 frases, determinista por usuario+día); EarningsChart con flechas (verde/ámbar); Reminders (cuenta regresiva desde 18:00 y aviso semanal con Hecho); admin RatesCard en Resumen. Quitadas tarjetas 'Tu posición' y fuego en rankings.
+
+- testing_agent iteration_4: 35/35 backend + frontend OK. Miembro real en base: 'Kkk' (código 2583). Tarifas actuales: KGEN 4.0 / BONO 0.30.
