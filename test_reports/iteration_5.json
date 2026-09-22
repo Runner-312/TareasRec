@@ -1,0 +1,26 @@
+{
+  "summary": "Regression testing after refactor (no functional changes). Backend: created /app/backend/tests/test_regression_iter5.py with 9 tests validating that GET /api/me/dashboard still returns the full expected key set post-refactor (build_member_weeks/compute_streaks/build_earnings/weekly_report_info/week_summary helpers). All 9 new tests PASS: top-level keys {name, now, today_date, rates, estimate{kgen,bonus_if_goal,bonus_now}, earnings, weekly_report{due,done,prev_week_start,prev_week_end,prev_minutes}, binance_pay_id, usdt_bep20_address, streak, best_streak, on_fire, days(len=7), weeks (exactly one status=current with paid/closed/qualifies/kgen_payday/bonus_payday), day_minutes, day_reviewed, today{registered,minutes}, week{start,end,payday,kgen_payday,minutes,hours,goal_minutes,remaining_minutes,qualifies,base,bonus_pct,bonus,estimated_total,kgen,rank}, global_rank, global_minutes, historical_minutes, weekly, global, entries}; streak=3 for 3 consecutive seeded days; estimate.kgen == round(minutes/60 * kgen_rate, 4). Full suite (with iter5): 42 passed, 2 pre-existing failures in test_batch_caracas.py (test_delete_current_week_ok — xdist ordering; test_delete_prev_week_entry_400 — needs MONGO_URL env), both unrelated to this refactor. Frontend (viewport 420px, Caracas ~22 sep 2026 03:46 UTC): logged in via UI pin-keypad as temp worker (TEST_Iter5UI code 7261) after seeding 1 entry, then as admin. Verified: payment-calendar-grid renders (30 day cells), calendar-legend has 7 items, calendar-prev-week/next-week clicks update calendar-focus-week, entry-day picker has 7 buttons and submit-minutes-button text updates on day click, tapping a calendar day opens calendar-day-popover with data-pop attr, flying-bills-bg present, earnings-chart + earnings-next present. Admin Registros mobile tab: entries-filters + entries-worker-filter + entries-week-prev/next/label + entries-count all render; 17 entry-row-* with entry-view-*/entry-review-*/entry-delete-* buttons all present. Only console error is an unrelated 404 for a resource (not JS). Recharts width(-1) warnings persist (pre-existing, non-blocking). Cleanup: temp worker + entry deleted; real member 'Kkk' (2583) untouched.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_regression_iter5.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_batch_caracas.py",
+    "/app/backend/tests/test_new_features.py",
+    "/app/test_reports/pytest/iter5_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "test_batch_caracas.py::test_delete_current_week_ok relies on ordering with test_delete_prev_week_entry_400 across xdist workers — flaky when parallelized; consider making each delete-test self-contained (create its own entry via API in the test body).",
+    "test_batch_caracas.py::test_delete_prev_week_entry_400 uses os.environ['MONGO_URL'] which is not exported to pytest sessions run outside supervisor; pytest.skip when unset would be safer.",
+    "Recharts ResponsiveContainer width(-1)/height(-1) warnings on earnings-chart at 420px on first mount persist (pre-existing, called out in iter_4)."
+  ],
+  "updated_files": ["/app/backend/tests/test_regression_iter5.py", "/app/test_reports/iteration_5.json"],
+  "success_rate": {"backend": "100% for refactor regression (9/9); full suite 42 passed / 2 pre-existing failures unrelated to refactor / 2 legacy skips", "frontend": "100% of regression checks (calendar, entry picker, popover, admin entries filters/rows, buttons)"},
+  "test_credentials": "Admin PIN 1209 (Wuilber). Temp worker TEST_Iter5 (code ~7xxx) created & deleted in-run.",
+  "seed_data_creation": "Ephemeral: TEST_Iter5 worker + 3 consecutive-day entries (via pytest fixture) and TEST_Iter5UI worker + 1 entry (via UI-driven fetch) — all cleaned up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Refactor of iteration_5 preserved API shape and UI test hooks. Two pre-existing test_batch_caracas.py failures are infra/ordering issues, not functional regressions. Server Caracas date at test ~22 Sep 2026. Weekly window Wed 2026-09-16 → Tue 2026-09-22.",
+  "rca of the issue": "N/A — refactor regression passed cleanly."
+}

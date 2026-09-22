@@ -74,3 +74,8 @@
 - Frontend: selector de día Mié–Mar en EntryForm; borrar reporte propio en EntriesList (con fecha/hora de subida en Caracas, también en admin); SummaryCards con KGEN/BONO estimados; GoalCard = barra fina + frase diaria (lib/quotes.js, 56 frases, determinista por usuario+día); EarningsChart con flechas (verde/ámbar); Reminders (cuenta regresiva desde 18:00 y aviso semanal con Hecho); admin RatesCard en Resumen. Quitadas tarjetas 'Tu posición' y fuego en rankings.
 
 - testing_agent iteration_4: 35/35 backend + frontend OK. Miembro real en base: 'Kkk' (código 2583). Tarifas actuales: KGEN 4.0 / BONO 0.30.
+
+## 2026-06 — Code review 2 aplicado
+- me_dashboard dividido: build_member_weeks, compute_streaks, build_earnings, weekly_report_info, week_summary.
+- PayCalendar dividido: calendar/DayCell.jsx, calendar/describeDay.js. EntriesTab dividido: admin/EntryRow.jsx, admin/EntriesFilters.jsx. EntryForm usa member/DayPicker.jsx. Constantes de margin en charts; keys estables en FlyingBills.
+- Falsos positivos descartados: variables 'indefinidas' (comprensiones/try), comparaciones 'is' (solo None). Tokens en localStorage: decisión mantenida.
