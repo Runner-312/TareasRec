@@ -66,4 +66,4 @@ const hash = (str) => {
   return Math.abs(h >>> 0);
 };
 
-export const quoteFor = (userId, dateISO) => QUOTES[hash(`${userId}|${dateISO}`) % QUOTES.length];
+export const quoteFor = (userId, seed) => QUOTES[hash(`${userId}|${seed}`) % QUOTES.length];

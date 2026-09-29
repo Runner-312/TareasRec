@@ -1,4 +1,4 @@
-const TILE = 260;
+const TILE = 208;
 
 function Bill({ x, y, r = 0 }) {
   return (
@@ -43,16 +43,20 @@ function Stack({ x, y, r = 0 }) {
 function Tile() {
   return (
     <>
-      <Bill x={48} y={44} r={-12} />
-      <Coin x={150} y={40} symbol="$" r={8} />
-      <Coin x={218} y={98} symbol="€" r={-6} size={13} />
-      <Eth x={60} y={140} r={10} />
-      <Coin x={135} y={128} symbol="₿" r={-10} size={16} />
-      <Bill x={200} y={200} r={14} />
-      <Stack x={40} y={222} r={-4} />
-      <Coin x={120} y={222} symbol="₮" r={6} size={12} />
-      <path d="M180 150 q6 -10 12 0 q6 10 12 0" strokeWidth="1.3" />
-      <path d="M92 86 l4 -4 l4 4 M96 82 v10" strokeWidth="1.3" />
+      <Bill x={40} y={36} r={-12} />
+      <Coin x={118} y={30} symbol="$" r={8} size={12} />
+      <Coin x={176} y={62} symbol="€" r={-6} size={11} />
+      <Eth x={48} y={112} r={10} />
+      <Coin x={108} y={104} symbol="₿" r={-10} size={14} />
+      <Bill x={160} y={150} r={14} />
+      <Stack x={32} y={178} r={-4} />
+      <Coin x={98} y={172} symbol="₮" r={6} size={10} />
+      <path d="M140 110 q6 -10 12 0 q6 10 12 0" strokeWidth="1.1" />
+      <path d="M76 70 l4 -4 l4 4 M80 66 v10" strokeWidth="1.1" />
+      <path d="M172 24 l3 3 m0 -3 l-3 3" strokeWidth="1.1" />
+      <path d="M22 140 l3 3 m0 -3 l-3 3" strokeWidth="1.1" />
+      <path d="M150 196 h14 M157 189 v14" strokeWidth="1.1" />
+      <Coin x={186} y={190} symbol="¢" r={-8} size={9} />
     </>
   );
 }
@@ -63,7 +67,7 @@ export default function DoodleBackground() {
       <svg className="doodle-layer doodle-layer-a absolute" width="200%" height="200%" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="doodle-a" width={TILE} height={TILE} patternUnits="userSpaceOnUse">
-            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><Tile /></g>
+            <g fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"><Tile /></g>
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#doodle-a)" />
@@ -71,7 +75,7 @@ export default function DoodleBackground() {
       <svg className="doodle-layer doodle-layer-b absolute" width="200%" height="200%" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="doodle-b" width={TILE * 1.5} height={TILE * 1.5} patternUnits="userSpaceOnUse" patternTransform="rotate(18)">
-            <g fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" transform="scale(1.35)"><Tile /></g>
+            <g fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" transform="scale(1.35)"><Tile /></g>
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#doodle-b)" />

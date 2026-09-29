@@ -77,7 +77,7 @@ export default function EmployeePage() {
         </section>
 
         <SummaryCards week={w} rates={data.rates} estimate={data.estimate} globalMinutes={data.global_minutes} historicalMinutes={data.historical_minutes} />
-        <GoalCard week={w} userId={user?.id} todayISO={data.today_date} />
+        <GoalCard week={w} userId={user?.id} sessionSeed={localStorage.getItem("token")} />
         <EarningsChart earnings={data.earnings} />
         <MemberNotices streak={data.streak} bestStreak={data.best_streak} binancePayId={data.binance_pay_id} walletAddress={data.usdt_bep20_address} />
 

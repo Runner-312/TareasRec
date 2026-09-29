@@ -17,14 +17,14 @@ const TABS = [
   { id: "rankings", label: "Rankings", mobileLabel: "Ranking", title: "Clasificación", description: "Posiciones semanales y globales", icon: Trophy },
   { id: "miembros", label: "Miembros", mobileLabel: "Equipo", title: "Equipo", description: "Accesos y datos de cada miembro", icon: Users },
   { id: "registros", label: "Registros", mobileLabel: "Registros", title: "Registros diarios", description: "Revisa capturas y valida el trabajo", icon: ClipboardList },
-  { id: "ajustes", label: "Ajustes", mobileLabel: "Ajustes", title: "Ajustes", description: "Tarifas por hora, historial y código de acceso", icon: Settings },
 ];
+const SETTINGS_TAB = { id: "ajustes", label: "Ajustes", title: "Ajustes", description: "Tarifas por hora, historial y código de acceso", icon: Settings };
 
 export default function AdminPage() {
   const [tab, setTab] = useState("resumen");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const activeTab = TABS.find((item) => item.id === tab) || TABS[0];
+  const activeTab = tab === "ajustes" ? SETTINGS_TAB : TABS.find((item) => item.id === tab) || TABS[0];
 
   const signOut = () => {
     logout();
@@ -51,6 +51,15 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <button
+              data-testid="admin-settings-button"
+              onClick={() => setTab("ajustes")}
+              aria-label="Ajustes"
+              aria-current={tab === "ajustes" ? "page" : undefined}
+              className={`h-9 w-9 flex items-center justify-center rounded-xl transition-colors ${tab === "ajustes" ? "bg-sky-500 text-white" : "bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700"}`}
+            >
+              <Settings className="w-4 h-4" />
+            </button>
             <button
               data-testid="admin-logout-button"
               onClick={signOut}

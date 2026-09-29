@@ -70,21 +70,21 @@
 .dark .bill { color: rgba(52, 211, 153, 0.14); }
 
 /* Fondo doodle (panel de miembro) */
-.member-bg { background-color: #F1F8F4; }
+.member-bg { background-color: #FFFFFF; }
 .dark .member-bg { background-color: #0B1120; }
-.doodle { color: rgba(16, 120, 80, 0.16); }
-.dark .doodle { color: rgba(125, 211, 252, 0.10); }
+.doodle { color: rgba(34, 160, 107, 0.34); }
+.dark .doodle { color: rgba(52, 211, 153, 0.16); }
 @keyframes doodle-drift-a {
     from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-260px, -260px, 0); }
+    to { transform: translate3d(-208px, -208px, 0); }
 }
 @keyframes doodle-drift-b {
-    from { transform: translate3d(-390px, 0, 0); }
-    to { transform: translate3d(0, -390px, 0); }
+    from { transform: translate3d(-312px, 0, 0); }
+    to { transform: translate3d(0, -312px, 0); }
 }
 .doodle-layer { top: 0; left: 0; will-change: transform; }
-.doodle-layer-a { animation: doodle-drift-a 70s linear infinite; }
-.doodle-layer-b { animation: doodle-drift-b 110s linear infinite; opacity: 0.55; }
+.doodle-layer-a { animation: doodle-drift-a 60s linear infinite; }
+.doodle-layer-b { animation: doodle-drift-b 95s linear infinite; opacity: 0.5; }
 @media (prefers-reduced-motion: reduce) {
     .doodle-layer, .bill { animation: none; }
 }
