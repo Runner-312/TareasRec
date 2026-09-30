@@ -19,7 +19,7 @@ PNG = bytes.fromhex(
 
 @pytest.fixture(scope="module")
 def admin_headers():
-    r = requests.post(f"{API}/auth/login", json={"code": "1209"})
+    r = requests.post(f"{API}/auth/login", json={"code": os.environ["TEST_ADMIN_CODE"]})
     assert r.status_code == 200
     return {"Authorization": f"Bearer {r.json()['token']}"}
 

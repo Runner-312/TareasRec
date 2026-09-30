@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import api, { fmtDate, fmtMoney, fmtMinutes } from "@/lib/api";
 import PayoutExport from "@/components/admin/PayoutExport";
 import ExtraBonusCard from "@/components/admin/ExtraBonusCard";
+import ManualPayout from "@/components/admin/ManualPayout";
 
 export default function OverviewTab() {
   const qc = useQueryClient();
@@ -56,6 +57,7 @@ export default function OverviewTab() {
       <section className="grid lg:grid-cols-[1.05fr_0.95fr] gap-6 items-start">
         <ExtraBonusCard />
       <PayoutExport />
+      <ManualPayout />
 
         <div>
           <div className="flex items-end justify-between gap-3 mb-3">

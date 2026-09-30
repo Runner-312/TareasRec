@@ -91,3 +91,8 @@ credentials.json
 *.key
 .credentials
 frontend/node_modules/.cache/default-development/0.pack
+
+# Herramientas/entorno (no deben ir al repo)
+.arena-backup/
+.gitconfig
+test_reports/

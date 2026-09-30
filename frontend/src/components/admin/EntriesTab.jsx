@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ImageIcon, Check } from "lucide-react";
 import { toast } from "sonner";
 import api, { fileUrl, fmtMinutes, fmtDateLong } from "@/lib/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ScreenshotViewer from "@/components/ScreenshotViewer";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EntryRow from "@/components/admin/EntryRow";
 import EntriesFilters from "@/components/admin/EntriesFilters";
@@ -74,28 +74,22 @@ export default function EntriesTab() {
         </section>
       ))}
 
-      <Dialog open={!!viewEntry} onOpenChange={() => setViewEntry(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <ImageIcon className="w-5 h-5 text-sky-500" />
-              {viewEntry?.worker_name} — {viewEntry && fmtMinutes(viewEntry.minutes)}
-            </DialogTitle>
-          </DialogHeader>
-          {viewEntry && (
-            <>
-              <img data-testid="entry-screenshot-full" src={fileUrl(viewEntry.screenshot_path)} alt="Captura de pantalla" className="w-full rounded-xl bg-slate-100" />
-              <button
-                data-testid="entry-review-dialog-button"
-                onClick={() => { review.mutate(viewEntry); setViewEntry(null); }}
-                className={`w-full flex items-center justify-center gap-2 text-white text-xs font-bold rounded-xl py-3 transition-all active:scale-95 ${viewEntry.reviewed ? "bg-slate-500" : "bg-emerald-500 hover:bg-emerald-600"}`}
-              >
-                <Check className="w-4 h-4" strokeWidth={3} /> {viewEntry.reviewed ? "Quitar marca de revisado" : "Marcar como revisado"}
-              </button>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ScreenshotViewer
+        open={!!viewEntry}
+        onClose={() => setViewEntry(null)}
+        src={viewEntry ? fileUrl(viewEntry.screenshot_path) : ""}
+        title={viewEntry ? `${viewEntry.worker_name} — ${fmtMinutes(viewEntry.minutes)}` : ""}
+        subtitle={viewEntry ? fmtDateLong(viewEntry.date) : ""}
+        footer={viewEntry && (
+          <button
+            data-testid="entry-review-dialog-button"
+            onClick={() => { review.mutate(viewEntry); setViewEntry(null); }}
+            className={`w-full flex items-center justify-center gap-2 text-white text-xs font-bold rounded-xl py-3 transition-all active:scale-95 ${viewEntry.reviewed ? "bg-slate-500" : "bg-emerald-500 hover:bg-emerald-600"}`}
+          >
+            <Check className="w-4 h-4" strokeWidth={3} /> {viewEntry.reviewed ? "Quitar marca de revisado" : "Marcar como revisado"}
+          </button>
+        )}
+      />
 
       <AlertDialog open={!!deleteEntry} onOpenChange={() => setDeleteEntry(null)}>
         <AlertDialogContent>

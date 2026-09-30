@@ -2,14 +2,14 @@
 
 Esta app NO usa email/password. El login es solo un código PIN de 4 dígitos:
 
-- Admin fijo: código `1209` (Wuilber), creado por seed en startup.
+- Admin fijo: código `<PIN_ADMIN>` (Wuilber), creado por seed en startup.
 - Empleadas: códigos creados por el admin en POST /api/admin/workers.
 
 ## Pruebas API
 
 ```bash
 # Login admin
-curl -X POST $API/api/auth/login -H "Content-Type: application/json" -d '{"code":"1209"}'
+curl -X POST $API/api/auth/login -H "Content-Type: application/json" -d '{"code":"<PIN_ADMIN>"}'
 # → {"token": "...", "user": {"id": "...", "name": "Wuilber", "role": "admin"}}
 
 # Token inválido

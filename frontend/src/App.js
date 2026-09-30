@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import "@/App.css";
+import { refreshFileToken } from "@/lib/api";
 
 if (localStorage.getItem("theme") === "dark") document.documentElement.classList.add("dark");
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -22,11 +23,13 @@ function AuthProvider({ children }) {
   const login = (token, u) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(u));
+    refreshFileToken();
     setUser(u);
   };
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    refreshFileToken();
     setUser(null);
   };
   return <AuthCtx.Provider value={{ user, login, logout }}>{children}</AuthCtx.Provider>;

@@ -6,7 +6,13 @@ import io
 import re
 import uuid
 import asyncio
+import base64
+import hashlib
+import hmac
 import logging
+import time
+from collections import deque
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
 from typing import Optional
@@ -14,7 +20,8 @@ from typing import Optional
 import jwt
 import openpyxl
 import requests
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
+from cryptography.fernet import Fernet, InvalidToken
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response
 from starlette.middleware.cors import CORSMiddleware
@@ -30,8 +37,103 @@ db = client[os.environ['DB_NAME']]
 
 JWT_SECRET = os.environ["JWT_SECRET"]
 JWT_ALGORITHM = "HS256"
-ADMIN_CODE = os.environ.get("ADMIN_CODE", "1209")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "wuilber1209@gmail.com")
+ADMIN_CODE = os.environ.get("ADMIN_CODE")    # solo se usa para crear el admin la primera vez
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+TOKEN_DAYS = int(os.environ.get("TOKEN_DAYS", "7"))
+FILE_TOKEN_SECONDS = 15 * 60
+TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS", "1"))
+
+# Pepper para proteger los PIN en la base de datos. Debe ser distinto de JWT_SECRET
+# y NO cambiarse después (si cambia, los PIN guardados dejan de funcionar).
+_pepper = os.environ.get("PIN_PEPPER")
+if not _pepper or len(_pepper) < 32:
+    raise RuntimeError(
+        "Falta PIN_PEPPER (mínimo 32 caracteres). Genera uno con: openssl rand -hex 32"
+    )
+PIN_PEPPER = _pepper.encode()
+_fernet = Fernet(base64.urlsafe_b64encode(hashlib.sha256(b"code-enc:" + PIN_PEPPER).digest()))
+
+
+def hash_code(code: str) -> str:
+    return hmac.new(PIN_PEPPER, code.encode(), hashlib.sha256).hexdigest()
+
+
+def encrypt_code(code: str) -> str:
+    return _fernet.encrypt(code.encode()).decode()
+
+
+def decrypt_code(token: Optional[str]) -> str:
+    if not token:
+        return ""
+    try:
+        return _fernet.decrypt(token.encode()).decode()
+    except InvalidToken:
+        return ""
+
+
+def public_user(u: dict) -> dict:
+    """Quita los campos internos del PIN; el admin sigue viendo el código en 'code'."""
+    out = {k: v for k, v in u.items() if k not in ("code_hash", "code_enc", "code")}
+    out["code"] = decrypt_code(u.get("code_enc"))
+    return out
+
+
+class AttemptLimiter:
+    """Limita intentos fallidos en memoria (una sola instancia del backend)."""
+
+    def __init__(self, max_fail: int, window: int):
+        self.max_fail, self.window = max_fail, window
+        self.fails = {}
+
+    def _prune(self, key):
+        q = self.fails.setdefault(key, deque())
+        limit = time.time() - self.window
+        while q and q[0] < limit:
+            q.popleft()
+        return q
+
+    def check(self, key):
+        q = self._prune(key)
+        if len(q) >= self.max_fail:
+            wait = int(q[0] + self.window - time.time()) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=f"Demasiados intentos. Intenta de nuevo en {max(1, wait // 60 + 1)} min",
+                headers={"Retry-After": str(max(1, wait))},
+            )
+
+    def fail(self, key):
+        self._prune(key).append(time.time())
+
+    def reset(self, key):
+        self.fails.pop(key, None)
+
+
+ip_limiter = AttemptLimiter(max_fail=5, window=15 * 60)        # por IP
+global_limiter = AttemptLimiter(max_fail=60, window=15 * 60)   # respaldo contra rotación de IPs
+change_code_limiter = AttemptLimiter(max_fail=5, window=15 * 60)
+
+
+def client_ip(request: Request) -> str:
+    xff = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",") if p.strip()]
+    if len(xff) >= TRUSTED_PROXY_HOPS > 0:
+        return xff[-TRUSTED_PROXY_HOPS]
+    return request.client.host if request.client else "unknown"
+
+
+def sniff_image(data: bytes):
+    """Devuelve (content_type, extensión) según los bytes reales, o None si no es imagen permitida."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg", "jpg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png", "png"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif", "gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp", "webp"
+    if data[4:8] == b"ftyp" and data[8:12] in (b"heic", b"heix", b"hevc", b"heim", b"heis", b"mif1", b"msf1"):
+        return "image/heic", "heic"
+    return None
 APP_NAME = os.environ.get("APP_NAME", "tareasrec")
 
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
@@ -68,7 +170,7 @@ def get_object(path: str):
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 
-app = FastAPI()
+# (app se crea más abajo con lifespan)
 api_router = APIRouter(prefix="/api")
 bearer = HTTPBearer(auto_error=False)
 
@@ -127,7 +229,17 @@ def create_token(user_id: str, role: str) -> str:
     payload = {
         "sub": user_id,
         "role": role,
-        "exp": datetime.now(timezone.utc) + timedelta(days=30),
+        "scope": "auth",
+        "exp": datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def create_file_token(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "scope": "file",
+        "exp": datetime.now(timezone.utc) + timedelta(seconds=FILE_TOKEN_SECONDS),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -139,8 +251,10 @@ async def get_current_user(creds: HTTPAuthorizationCredentials = Depends(bearer)
         payload = jwt.decode(creds.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
+    if payload.get("scope", "auth") != "auth":
+        raise HTTPException(status_code=401, detail="Token inválido")
     user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
-    if not user:
+    if not user or not user.get("active", True):
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
     return user
 
@@ -252,15 +366,18 @@ class ExtraBonusBody(BaseModel):
 async def change_admin_code(body: ChangeCodeBody, admin=Depends(require_admin)):
     current = body.current_code.strip()
     new = body.new_code.strip()
-    if current != admin.get("code"):
+    change_code_limiter.check(admin["id"])
+    if not hmac.compare_digest(hash_code(current), admin.get("code_hash") or ""):
+        change_code_limiter.fail(admin["id"])
         raise HTTPException(status_code=401, detail="El código actual no es correcto")
+    change_code_limiter.reset(admin["id"])
     if not (new.isdigit() and len(new) == 4):
         raise HTTPException(status_code=400, detail="El nuevo código debe tener 4 dígitos")
     if new == current:
         raise HTTPException(status_code=400, detail="El nuevo código es igual al actual")
-    if await db.users.find_one({"code": new, "id": {"$ne": admin["id"]}}):
+    if await db.users.find_one({"code_hash": hash_code(new), "id": {"$ne": admin["id"]}}):
         raise HTTPException(status_code=409, detail="Ese código ya lo usa un miembro")
-    await db.users.update_one({"id": admin["id"]}, {"$set": {"code": new, "code_changed_at": datetime.now(timezone.utc).isoformat()}})
+    await db.users.update_one({"id": admin["id"]}, {"$set": {"code_hash": hash_code(new), "code_enc": encrypt_code(new), "code_changed_at": datetime.now(timezone.utc).isoformat()}})
     return {"ok": True}
 
 
@@ -339,15 +456,27 @@ async def root():
 
 
 @api_router.post("/auth/login")
-async def login(body: LoginBody):
+async def login(body: LoginBody, request: Request):
+    ip = client_ip(request)
+    ip_limiter.check(ip)
+    global_limiter.check("global")
     code = body.code.strip()
     if not (code.isdigit() and len(code) == 4):
         raise HTTPException(status_code=400, detail="El código debe tener 4 dígitos")
-    user = await db.users.find_one({"code": code, "active": True}, {"_id": 0})
+    user = await db.users.find_one({"code_hash": hash_code(code), "active": True}, {"_id": 0})
     if not user:
+        ip_limiter.fail(ip)
+        global_limiter.fail("global")
+        logger.warning("Login fallido desde %s", ip)
         raise HTTPException(status_code=401, detail="Código incorrecto")
+    ip_limiter.reset(ip)
     token = create_token(user["id"], user["role"])
     return {"token": token, "user": {"id": user["id"], "name": user["name"], "role": user["role"]}}
+
+
+@api_router.post("/auth/file-token")
+async def file_token(user=Depends(get_current_user)):
+    return {"token": create_file_token(user["id"]), "expires_in": FILE_TOKEN_SECONDS}
 
 
 @api_router.get("/auth/me")
@@ -370,6 +499,7 @@ async def list_workers(admin=Depends(require_admin)):
     pipeline = [{"$group": {"_id": "$worker_id", "minutes": {"$sum": "$minutes"}}}]
     agg = await db.entries.aggregate(pipeline).to_list(10000)
     total_min = {a["_id"]: a["minutes"] for a in agg}
+    workers = [public_user(w) for w in workers]
     for w in workers:
         w["week_minutes"] = week_min.get(w["id"], 0)
         w["historical_minutes"] = int(w.get("historical_minutes") or 0)
@@ -387,13 +517,14 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
         raise HTTPException(status_code=400, detail="El nombre es obligatorio")
     if not (code.isdigit() and len(code) == 4):
         raise HTTPException(status_code=400, detail="El código debe tener 4 dígitos")
-    existing = await db.users.find_one({"code": code})
+    existing = await db.users.find_one({"code_hash": hash_code(code)})
     if existing:
         raise HTTPException(status_code=400, detail="Ese código ya está en uso")
     doc = {
         "id": str(uuid.uuid4()),
         "name": name,
-        "code": code,
+        "code_hash": hash_code(code),
+        "code_enc": encrypt_code(code),
         "role": "worker",
         "active": True,
         "binance_pay_id": clean_binance(body.binance_pay_id) or "",
@@ -403,7 +534,7 @@ async def create_worker(body: WorkerBody, admin=Depends(require_admin)):
     }
     await db.users.insert_one(doc)
     doc.pop("_id", None)
-    return doc
+    return public_user(doc)
 
 
 @api_router.put("/admin/workers/{worker_id}")
@@ -419,10 +550,11 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
         code = body.code.strip()
         if not (code.isdigit() and len(code) == 4):
             raise HTTPException(status_code=400, detail="El código debe tener 4 dígitos")
-        existing = await db.users.find_one({"code": code, "id": {"$ne": worker_id}})
+        existing = await db.users.find_one({"code_hash": hash_code(code), "id": {"$ne": worker_id}})
         if existing:
             raise HTTPException(status_code=400, detail="Ese código ya está en uso")
-        updates["code"] = code
+        updates["code_hash"] = hash_code(code)
+        updates["code_enc"] = encrypt_code(code)
     if body.binance_pay_id is not None:
         updates["binance_pay_id"] = clean_binance(body.binance_pay_id)
     if body.usdt_bep20_address is not None:
@@ -433,7 +565,7 @@ async def update_worker(worker_id: str, body: WorkerBody, admin=Depends(require_
         updates["historical_minutes"] = int(body.historical_minutes)
     if updates:
         await db.users.update_one({"id": worker_id}, {"$set": updates})
-    return await db.users.find_one({"id": worker_id}, {"_id": 0})
+    return public_user(await db.users.find_one({"id": worker_id}, {"_id": 0}))
 
 
 @api_router.delete("/admin/workers/{worker_id}")
@@ -621,29 +753,69 @@ async def payout_preview(admin=Depends(require_admin)):
     }
 
 
+def fill_binance_template(rows):
+    wb = openpyxl.load_workbook(TEMPLATE_PATH)
+    ws = wb.active
+    for i, r in enumerate(rows[:250]):
+        row = 3 + i
+        ws.cell(row=row, column=1, value=r["account_type"])
+        ws.cell(row=row, column=2, value=r["account"])
+        ws.cell(row=row, column=3, value=r["currency"])
+        ws.cell(row=row, column=4, value=r["amount"])
+        ws.cell(row=row, column=5, value=r.get("note") or "")
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="binance_pay_{today_local().isoformat()}.xlsx"'},
+    )
+
+
 @api_router.get("/admin/payments/export.xlsx")
 async def payout_xlsx(admin=Depends(require_admin)):
     overview = await build_overview()
     rows = [r for r in payout_rows(overview["pending"]) if r["ready"]]
     if not rows:
         raise HTTPException(status_code=400, detail="No hay pagos listos para exportar")
-    wb = openpyxl.load_workbook(TEMPLATE_PATH)
-    ws = wb.active
-    for i, r in enumerate(rows[:250]):
-        row = 3 + i
-        ws.cell(row=row, column=1, value="Binance ID (BUID)")
-        ws.cell(row=row, column=2, value=r["binance_pay_id"])
-        ws.cell(row=row, column=3, value=PAYOUT_CURRENCY)
-        ws.cell(row=row, column=4, value=r["total"])
-        ws.cell(row=row, column=5, value=r["name"])
-    buf = io.BytesIO()
-    wb.save(buf)
-    filename = f"binance_pay_{today_local().isoformat()}.xlsx"
-    return Response(
-        content=buf.getvalue(),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return fill_binance_template([
+        {"account_type": "Binance ID (BUID)", "account": r["binance_pay_id"], "currency": PAYOUT_CURRENCY, "amount": r["total"], "note": r["name"]}
+        for r in rows
+    ])
+
+
+ACCOUNT_TYPES = ("Binance ID (BUID)", "Binance Registered Email")
+
+
+class PayoutRowBody(BaseModel):
+    account_type: str
+    account: str
+    currency: str = PAYOUT_CURRENCY
+    amount: float
+    note: Optional[str] = ""
+
+
+class CustomPayoutBody(BaseModel):
+    rows: list[PayoutRowBody]
+
+
+@api_router.post("/admin/payments/custom.xlsx")
+async def custom_payout_xlsx(body: CustomPayoutBody, admin=Depends(require_admin)):
+    if not body.rows:
+        raise HTTPException(status_code=400, detail="Agrega al menos un destinatario")
+    if len(body.rows) > 250:
+        raise HTTPException(status_code=400, detail="Máximo 250 destinatarios por archivo")
+    clean = []
+    for i, r in enumerate(body.rows, start=1):
+        if r.account_type not in ACCOUNT_TYPES:
+            raise HTTPException(status_code=400, detail=f"Fila {i}: tipo de cuenta inválido")
+        account = r.account.strip()
+        if not account:
+            raise HTTPException(status_code=400, detail=f"Fila {i}: falta el ID o correo")
+        if r.amount <= 0:
+            raise HTTPException(status_code=400, detail=f"Fila {i}: el monto debe ser mayor a 0")
+        clean.append({"account_type": r.account_type, "account": account, "currency": (r.currency or PAYOUT_CURRENCY).strip().upper()[:10], "amount": round(r.amount, 2), "note": (r.note or "")[:60]})
+    return fill_binance_template(clean)
 
 
 @api_router.post("/admin/payments/mark-all")
@@ -743,15 +915,17 @@ async def create_entry(
     existing = await db.entries.find_one({"worker_id": user["id"], "date": target.isoformat()})
     if existing:
         raise HTTPException(status_code=409, detail="Ya registraste tus minutos de ese día")
-    ext = (screenshot.filename or "png").split(".")[-1].lower()
-    if ext not in ("jpg", "jpeg", "png", "webp", "gif", "heic"):
-        ext = "png"
-    data = await screenshot.read()
-    if len(data) > 10 * 1024 * 1024:
+    max_bytes = 10 * 1024 * 1024
+    data = await screenshot.read(max_bytes + 1)
+    if len(data) > max_bytes:
         raise HTTPException(status_code=400, detail="La imagen es demasiado grande")
+    sniffed = sniff_image(data)
+    if not sniffed:
+        raise HTTPException(status_code=400, detail="El archivo no es una imagen válida (JPG, PNG, WEBP, GIF o HEIC)")
+    content_type, ext = sniffed
     path = f"{APP_NAME}/uploads/{user['id']}/{uuid.uuid4()}.{ext}"
     try:
-        result = await asyncio.to_thread(put_object, path, data, screenshot.content_type or "image/png")
+        result = await asyncio.to_thread(put_object, path, data, content_type)
     except Exception as e:
         logger.error(f"Storage upload failed: {e}")
         raise HTTPException(status_code=502, detail="No se pudo subir la captura")
@@ -961,41 +1135,87 @@ async def me_dashboard(user=Depends(get_current_user)):
 @api_router.get("/files/{path:path}")
 async def serve_file(path: str, token: str = Query(...)):
     try:
-        jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Token inválido")
-    if not path.startswith(f"{APP_NAME}/"):
+    if payload.get("scope") != "file":
+        raise HTTPException(status_code=401, detail="Token inválido")
+    parts = path.split("/")
+    if ".." in parts or "" in parts or parts[0] != APP_NAME:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
+    if not user or not user.get("active", True):
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    is_owner = len(parts) >= 4 and parts[1] == "uploads" and parts[2] == user["id"]
+    if user.get("role") != "admin" and not is_owner:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
     try:
-        data, content_type = await asyncio.to_thread(get_object, path)
+        data, _ = await asyncio.to_thread(get_object, path)
     except Exception:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
-    return Response(content=data, media_type=content_type)
+    sniffed = sniff_image(data)
+    if not sniffed:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return Response(
+        content=data,
+        media_type=sniffed[0],
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Cache-Control": "private, max-age=300",
+            "Content-Disposition": "inline",
+        },
+    )
 
 
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    await startup()
+    yield
+    client.close()
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(api_router)
 
+_cors = [o.strip() for o in (os.environ.get("CORS_ORIGINS") or os.environ.get("FRONTEND_URL") or "").split(",") if o.strip()]
+if not _cors or "*" in _cors:
+    logger.warning("CORS abierto (*). Define CORS_ORIGINS con los dominios reales del frontend.")
+    _cors = ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,  # se usa Bearer token, no cookies
+    allow_origins=_cors,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
-@app.on_event("startup")
 async def startup():
-    await db.users.create_index("code", unique=True)
+    # Migración: PIN en texto plano -> hash + cifrado (primero quitar el índice único viejo)
+    try:
+        await db.users.drop_index("code_1")
+    except Exception:
+        pass
+    async for u in db.users.find({"code": {"$exists": True}}, {"_id": 0, "id": 1, "code": 1}):
+        c = str(u["code"])
+        await db.users.update_one(
+            {"id": u["id"]},
+            {"$set": {"code_hash": hash_code(c), "code_enc": encrypt_code(c)}, "$unset": {"code": ""}},
+        )
+    await db.users.create_index("code_hash", unique=True, partialFilterExpression={"code_hash": {"$exists": True}})
     await db.entries.create_index([("worker_id", 1), ("date", 1)], unique=True)
     await db.payments.create_index([("worker_id", 1), ("week_start", 1)], unique=True)
     existing = await db.users.find_one({"role": "admin"})
     if not existing:
+        if not (ADMIN_CODE and ADMIN_CODE.isdigit() and len(ADMIN_CODE) == 4):
+            raise RuntimeError("No hay admin: define ADMIN_CODE (4 dígitos) para crearlo la primera vez")
         await db.users.insert_one({
             "id": str(uuid.uuid4()),
             "name": "Wuilber",
             "email": ADMIN_EMAIL,
-            "code": ADMIN_CODE,
+            "code_hash": hash_code(ADMIN_CODE),
+            "code_enc": encrypt_code(ADMIN_CODE),
             "role": "admin",
             "active": True,
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -1004,15 +1224,10 @@ async def startup():
     else:
         await db.users.update_one(
             {"role": "admin"},
-            {"$set": {"name": "Wuilber", "email": ADMIN_EMAIL, "active": True}},
+            {"$set": {"name": "Wuilber", "active": True, **({"email": ADMIN_EMAIL} if ADMIN_EMAIL else {})}},
         )
     try:
         await asyncio.to_thread(init_storage)
         logger.info("Storage inicializado")
     except Exception as e:
         logger.error(f"Storage init falló: {e}")
-
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()

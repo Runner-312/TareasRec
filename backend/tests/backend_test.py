@@ -5,14 +5,14 @@ import uuid
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://trabajo-grabado.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
 API = f"{BASE_URL}/api"
 
 
 # ---------- fixtures ----------
 @pytest.fixture(scope="session")
 def admin_token():
-    r = requests.post(f"{API}/auth/login", json={"code": "1209"})
+    r = requests.post(f"{API}/auth/login", json={"code": os.environ["TEST_ADMIN_CODE"]})
     assert r.status_code == 200, r.text
     data = r.json()
     assert data["user"]["role"] == "admin"

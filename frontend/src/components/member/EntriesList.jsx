@@ -4,10 +4,12 @@ import { Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import api, { fileUrl, fmtMinutes, fmtDate, fmtDateTime } from "@/lib/api";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import ScreenshotViewer from "@/components/ScreenshotViewer";
 
 export default function EntriesList({ entries, weekStart, weekEnd }) {
   const qc = useQueryClient();
   const [target, setTarget] = useState(null);
+  const [view, setView] = useState(null);
   const del = useMutation({
     mutationFn: (id) => api.delete(`/entries/${id}`),
     onSuccess: () => {
@@ -29,7 +31,9 @@ export default function EntriesList({ entries, weekStart, weekEnd }) {
             const deletable = e.date >= weekStart && e.date <= weekEnd;
             return (
               <div key={e.id} data-testid={`my-entry-${e.id}`} className="bg-white rounded-2xl border border-slate-100 p-3 shadow-sm flex items-center gap-3">
-                <img src={fileUrl(e.screenshot_path)} alt="captura" className="w-12 h-12 rounded-xl object-cover bg-slate-100 shrink-0" />
+                <button data-testid={`my-entry-view-${e.id}`} onClick={() => setView(e)} className="shrink-0 rounded-xl overflow-hidden ring-1 ring-slate-200 active:scale-95 transition" aria-label="Ver captura">
+                  <img src={fileUrl(e.screenshot_path)} alt="captura" className="w-12 h-12 object-cover bg-slate-100" />
+                </button>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm text-slate-800 capitalize">{fmtDate(e.date)}</p>
                   <p className="text-[11px] text-slate-400 flex items-center gap-1" data-testid={`my-entry-uploaded-${e.id}`}>
@@ -62,6 +66,14 @@ export default function EntriesList({ entries, weekStart, weekEnd }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ScreenshotViewer
+        open={!!view}
+        onClose={() => setView(null)}
+        src={view ? fileUrl(view.screenshot_path) : ""}
+        title={view ? `Reporte del ${fmtDate(view.date)} · ${fmtMinutes(view.minutes)}` : ""}
+        subtitle={view ? `Subido: ${fmtDateTime(view.created_at)}` : ""}
+      />
     </section>
   );
 }

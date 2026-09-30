@@ -10,8 +10,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export const fileUrl = (path) =>
-  `${API}/files/${path}?token=${localStorage.getItem("token")}`;
+// Token de corta duración (15 min) solo para ver imágenes; el token de sesión nunca va en la URL.
+let fileToken = "";
+export const refreshFileToken = async () => {
+  if (!localStorage.getItem("token")) {
+    fileToken = "";
+    return;
+  }
+  try {
+    const { data } = await api.post("/auth/file-token");
+    fileToken = data.token;
+  } catch {
+    fileToken = "";
+  }
+};
+refreshFileToken();
+setInterval(refreshFileToken, 10 * 60 * 1000);
+
+export const fileUrl = (path) => `${API}/files/${path}?token=${fileToken}`;
 
 export const TZ = "America/Caracas";
 
