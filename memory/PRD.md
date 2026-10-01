@@ -79,3 +79,10 @@
 - me_dashboard dividido: build_member_weeks, compute_streaks, build_earnings, weekly_report_info, week_summary.
 - PayCalendar dividido: calendar/DayCell.jsx, calendar/describeDay.js. EntriesTab dividido: admin/EntryRow.jsx, admin/EntriesFilters.jsx. EntryForm usa member/DayPicker.jsx. Constantes de margin en charts; keys estables en FlyingBills.
 - Falsos positivos descartados: variables 'indefinidas' (comprensiones/try), comparaciones 'is' (solo None). Tokens en localStorage: decisión mantenida.
+
+## 2026-06 — Zip de seguridad aplicado + pagos múltiples + visor
+- Backend (del zip TareasRec-corregido): PIN guardado como HMAC(code, PIN_PEPPER) + Fernet (code_hash/code_enc), migración automática en startup (corregido: drop de índice code_1 ANTES de migrar), rate limit login por IP/global (429), token de archivos de 15 min (POST /api/auth/file-token, scope file), /api/files valida propietario y sniff de imagen, CORS restringido (CORS_ORIGINS), lifespan. ADMIN_CODE solo se usa al crear el admin.
+- .env: PIN_PEPPER (64 hex, NO cambiar), CORS_ORIGINS=https://minutos-kgen.com. Producción: agregar ambas en Secrets al republicar.
+- Frontend: api.js refreshFileToken(); ScreenshotViewer.jsx (pantalla completa con botón Cerrar arriba y abajo) usado en admin EntriesTab y miembro EntriesList (miniatura tocable).
+- admin/ManualPayout.jsx (Pagos múltiples Binance Pay: tipo cuenta, ID/correo, moneda, monto; lista; total; Cargar pendientes; Descargar Excel via POST /api/admin/payments/custom.xlsx; Borrar todo; persistido en localStorage).
+- Botón Ajustes (engranaje) en header admin junto a Salir → pestaña Ajustes (tarifas+historial, cambio de PIN). Doodle fondo blanco con trazos verdes finos; frase cambia por sesión (seed=token).
